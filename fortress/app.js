@@ -175,8 +175,13 @@ function renderTable() {
     tdTime.appendChild(spanT);
 
     const tdWho = document.createElement('td');
-    tdWho.textContent = r.who || '—';
-    if (!r.who) tdWho.style.color = 'var(--txt-dim)';
+    tdWho.className = 'td-who';
+    const spanW = document.createElement('span');
+    spanW.className = 'who-txt' + (r.who ? '' : ' empty');
+    spanW.textContent = r.who || '—';
+    spanW.title = '点击修改集结人员';
+    spanW.addEventListener('click', () => editWhoInline(tdWho, r));
+    tdWho.appendChild(spanW);
 
     const tdOp = document.createElement('td');
     const box = document.createElement('div');
@@ -239,6 +244,38 @@ function renderAll() {
   renderAllianceUI();
   renderTable();
   renderStats();
+}
+
+/* 行内修改集结人员：点击人员单元格 → 原地输入框 → 回车/失焦保存，Esc 取消 */
+function editWhoInline(td, row) {
+  if (td.querySelector('input')) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = row.who || '';
+  input.maxLength = 30;
+  input.className = 'who-edit';
+  input.placeholder = '集结人员，可留空';
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const commit = save => {
+    if (done) return;
+    done = true;
+    if (save) {
+      row.who = input.value.trim();
+      persist();
+      renderTable();
+    } else {
+      renderTable();
+    }
+  };
+  input.addEventListener('blur', () => commit(true));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+    if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+  });
 }
 
 /* 行内修改时间：点击时间单元格 → 出现「时间节点 + 加分钟」下拉 → 选完即保存 */
@@ -374,6 +411,16 @@ $('#btnSortTime').addEventListener('click', () => {
   renderTable();
 });
 
+/* 一键清空全部开启时间（联盟、人员保留），方便下次调整 */
+$('#btnClearTime').addEventListener('click', () => {
+  if (!rows.some(r => r.time)) { alert('当前没有已填的时间。'); return; }
+  if (!confirm('清空全部 ' + rows.filter(r => r.time).length + ' 条开启时间？\n联盟、堡垒、人员保留，仅清空时间。')) return;
+  rows.forEach(r => { r.time = ''; });
+  persist();
+  renderTable();
+  renderStats();
+});
+
 $('#btnAddAl').addEventListener('click', () => {
   const name = $('#newAl').value.trim().toUpperCase();
   if (!name) return;
@@ -393,7 +440,7 @@ $('#inNotice').addEventListener('input', e => {
 
 /* ============ 导出 ============ */
 $('#btnExportCsv').addEventListener('click', () => {
-  const lines = ['序号,联盟,堡垒要塞,开启时间,开集给人员'];
+  const lines = ['序号,联盟,堡垒要塞,开启时间,开集结人员'];
   rows.forEach((r, i) => {
     const q = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
     lines.push([i + 1, q(r.al), q(r.fort), q(r.time), q(r.who)].join(','));
@@ -410,13 +457,14 @@ function downloadFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
-/* 导出图片：仿「堡垒要塞具体时间人员」表格样式 */
+/* 导出图片：堡垒要塞具体时间人员（美化版表格图） */
 $('#btnExport').addEventListener('click', () => {
-  const W = 920, pad = 24, rowH = 52, titleH = 92, headH = 54;
+  const W = 920, pad = 28, rowH = 54, titleH = 100, headH = 56;
   const tableW = W - pad * 2;
-  const cols = [150, 230, 150, tableW - 530]; // 联盟 / 堡垒要塞 / 时间 / 开集给人员
-  const noticeH = notice ? 78 : 30;
-  const H = titleH + headH + rows.length * rowH + noticeH + 26;
+  const cols = [140, 240, 160, tableW - 540]; // 联盟 / 堡垒要塞 / 时间 / 开集结人员
+  const noticeH = notice ? 68 : 20;
+  const footH = 34;
+  const H = titleH + headH + rows.length * rowH + noticeH + footH;
 
   const scale = 2;
   const c = document.createElement('canvas');
@@ -425,89 +473,137 @@ $('#btnExport').addEventListener('click', () => {
   ctx.scale(scale, scale);
 
   const FONT = '"Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
 
   // 背景
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // 标题栏
-  ctx.fillStyle = '#1f4e79';
+  // 标题栏（深蓝渐变 + 副标题）
+  const g = ctx.createLinearGradient(0, 0, W, titleH);
+  g.addColorStop(0, '#173f63');
+  g.addColorStop(1, '#2e75b6');
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, titleH);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '800 34px ' + FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('堡垒要塞具体时间人员', W / 2, titleH / 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 34px ' + FONT;
+  ctx.fillText('堡垒要塞具体时间人员', W / 2, titleH / 2 - 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.font = '400 14px ' + FONT;
+  ctx.fillText('无尽冬日 · 堡垒开启时间表', W / 2, titleH / 2 + 24);
 
   // 表头
   const headY = titleH;
-  ctx.fillStyle = '#eaf3fb';
+  const bodyTop = headY + headH;
+  ctx.fillStyle = '#e8f2fb';
   ctx.fillRect(pad, headY, tableW, headH);
-  const heads = ['联盟', '堡垒要塞', '时间', '开集给人员'];
+  ctx.fillStyle = '#2e75b6';
+  ctx.fillRect(pad, bodyTop - 3, tableW, 3);
+  const heads = ['联盟', '堡垒要塞', '时间', '开集结人员'];
   let hx = pad;
   ctx.fillStyle = '#12395c';
   ctx.font = '700 19px ' + FONT;
+  ctx.textAlign = 'left';
   heads.forEach((h, i) => {
-    ctx.textAlign = 'left';
     ctx.fillText(h, hx + 18, headY + headH / 2);
     hx += cols[i];
   });
 
-  // 表格线
-  ctx.strokeStyle = '#2e75b6';
-  ctx.lineWidth = 1.5;
-
-  // 数据行（淡黄底）
+  // 数据行（淡黄斑马纹）
   rows.forEach((r, i) => {
-    const y = headY + headH + i * rowH;
+    const y = bodyTop + i * rowH;
     ctx.fillStyle = i % 2 ? '#fff2cc' : '#fff8e2';
     ctx.fillRect(pad, y, tableW, rowH);
 
     ctx.textBaseline = 'middle';
     let cx = pad;
-    // 联盟（带色块）
-    ctx.fillStyle = r.al ? alColor(r.al) : '#9aa7b0';
-    ctx.fillRect(cx + 14, y + rowH / 2 - 6, 12, 12);
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = '700 19px ' + FONT;
-    ctx.textAlign = 'left';
-    ctx.fillText(r.al || '—', cx + 36, y + rowH / 2);
+    // 联盟（圆角色块）
+    if (r.al) {
+      ctx.fillStyle = alColor(r.al);
+      rr(cx + 14, y + rowH / 2 - 7, 14, 14, 4);
+      ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = '700 19px ' + FONT;
+      ctx.fillText(r.al, cx + 38, y + rowH / 2);
+    } else {
+      ctx.fillStyle = '#9aa7b0';
+      ctx.font = '400 18px ' + FONT;
+      ctx.fillText('—', cx + 16, y + rowH / 2);
+    }
     cx += cols[0];
     // 堡垒
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = '700 19px ' + FONT;
     ctx.fillText(r.fort, cx + 18, y + rowH / 2);
     cx += cols[1];
     // 时间
-    ctx.font = '700 20px ' + FONT;
+    ctx.fillStyle = r.time ? '#7a4f01' : '#9aa7b0';
+    ctx.font = '800 20px ' + FONT;
     ctx.fillText(r.time || '—', cx + 18, y + rowH / 2);
     cx += cols[2];
     // 人员
-    ctx.font = '400 18px ' + FONT;
     ctx.fillStyle = r.who ? '#1a1a1a' : '#9aa7b0';
-    ctx.fillText(r.who || '', cx + 18, y + rowH / 2);
+    ctx.font = '400 18px ' + FONT;
+    ctx.fillText(r.who || '—', cx + 18, y + rowH / 2);
   });
 
-  // 网格线
+  // 内部网格线（浅金）
+  ctx.strokeStyle = '#ecd9a0';
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let i = 0; i <= rows.length; i++) {
-    const y = headY + headH + i * rowH;
+  for (let i = 1; i < rows.length; i++) {
+    const y = bodyTop + i * rowH;
     ctx.moveTo(pad, y); ctx.lineTo(pad + tableW, y);
   }
-  let gx = pad;
-  [0, cols[0], cols[0] + cols[1], cols[0] + cols[1] + cols[2], tableW].forEach(w => {
-    gx = pad + w;
-    ctx.moveTo(gx, headY);
-    ctx.lineTo(gx, headY + headH + rows.length * rowH);
+  [cols[0], cols[0] + cols[1], cols[0] + cols[1] + cols[2]].forEach(w => {
+    const x = pad + w;
+    ctx.moveTo(x, bodyTop);
+    ctx.lineTo(x, bodyTop + rows.length * rowH);
   });
   ctx.stroke();
+
+  // 表格外框（蓝）
+  ctx.strokeStyle = '#2e75b6';
+  ctx.lineWidth = 2;
   ctx.strokeRect(pad, headY, tableW, headH + rows.length * rowH);
 
-  // 公告（红字）
+  // 公告（红字圆角横幅）
+  let yCur = bodyTop + rows.length * rowH;
   if (notice) {
-    ctx.fillStyle = '#e02020';
-    ctx.font = '800 26px ' + FONT;
+    const ny = yCur + 14, nh = 50;
+    ctx.fillStyle = '#fdecec';
+    rr(pad, ny, tableW, nh, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#f3c1c1';
+    ctx.lineWidth = 1.5;
+    rr(pad, ny, tableW, nh, 10);
+    ctx.stroke();
+    ctx.fillStyle = '#d93025';
+    ctx.font = '800 24px ' + FONT;
     ctx.textAlign = 'center';
-    ctx.fillText(notice, W / 2, headY + headH + rows.length * rowH + 46);
+    ctx.fillText(notice, W / 2, ny + nh / 2);
+    yCur = ny + nh;
+    ctx.textAlign = 'left';
   }
+
+  // 页脚（生成时间）
+  const d = new Date();
+  const p2 = n => String(n).padStart(2, '0');
+  const stamp = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+  ctx.fillStyle = '#9aa7b0';
+  ctx.font = '400 13px ' + FONT;
+  ctx.textAlign = 'right';
+  ctx.fillText('生成于 ' + stamp + ' · 无尽冬日工具站', W - pad, H - 16);
 
   const a = document.createElement('a');
   a.download = '堡垒要塞时间_' + timeStamp() + '.png';

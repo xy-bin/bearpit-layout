@@ -114,6 +114,11 @@ a { color: var(--teal); }
 .td-time { cursor: pointer; }
 .time-edit-box { display: flex; gap: 4px; align-items: center; }
 .time-edit { background: #0e1622; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px; font-family: Consolas, monospace; font-size: 13.5px; padding: 2px 4px; color-scheme: dark; }
+.td-who { cursor: pointer; }
+.who-txt { border-bottom: 1px dashed transparent; }
+.who-txt:hover { border-bottom-color: var(--teal, #4db6ac); }
+.who-txt.empty { color: var(--txt-dim); }
+.who-edit { background: #0e1622; color: var(--txt); border: 1px solid var(--teal, #4db6ac); border-radius: 5px; font-size: 14px; padding: 3px 8px; width: 95%; }
 .op-btns { display: flex; gap: 6px; }
 .empty { color: var(--txt-dim); text-align: center; padding: 26px 0; font-size: 13.5px; }
 
