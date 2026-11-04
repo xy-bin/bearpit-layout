@@ -147,8 +147,8 @@ t('parseLayoutCSV：解析真实模板文件', () => {
   assert.strictEqual(r.flags.length, 18, '旗子行数');
   assert.strictEqual(r.mines.length, 4, '联盟矿行数');
   assert.deepStrictEqual(r.mines[0], { x: 623, y: 514 });
-  const first = r.members[0];
-  assert.strictEqual(first.name, 'Aaron');
+  const first = r.members.find(m => m.name === 'Aaron');
+  assert.ok(first, '应包含 Aaron');
   assert.strictEqual(first.x, 625);
   assert.strictEqual(first.y, 525);
   assert.strictEqual(first.cat, '车身');

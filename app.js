@@ -56,6 +56,7 @@ const state = {
   qCat: DEFAULT_CAT,
   eCat: DEFAULT_CAT,
   showCoords: false,
+  watermark: '',                // 导出图片水印（空 = 不显示）
   zoom: 1,
   nextId: 1,
   filter: '',
@@ -243,7 +244,8 @@ function persistNow() {
       v: 1,
       ts: Date.now(),
       data: JSON.parse(snapshot()),
-      showCoords: state.showCoords
+      showCoords: state.showCoords,
+      watermark: state.watermark
     }));
   } catch (e) { /* 无痕模式 / 存储被禁用：忽略 */ }
 }
@@ -1460,6 +1462,16 @@ function setupEvents() {
     scheduleSave();
   });
 
+  /* --- 导出图片水印（留空不显示），随数据自动保存 --- */
+  const wmInput = $('#inWatermark');
+  if (wmInput) {
+    wmInput.value = state.watermark;
+    wmInput.addEventListener('input', e => {
+      state.watermark = e.target.value.trim();
+      scheduleSave();
+    });
+  }
+
   $('#btnApplyCenter').addEventListener('click', () => {
     const x = parseInt($('#inCX').value, 10);
     const y = parseInt($('#inCY').value, 10);
@@ -1813,9 +1825,11 @@ function exportPNG() {
   }
 
   ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(125,147,163,0.6)';
-  ctx.font = '11px ' + MONO;
-  ctx.fillText('Sakura 版式参考 · 网页复刻版', W - padX, legendY);
+  if (state.watermark) {
+    ctx.fillStyle = 'rgba(125,147,163,0.6)';
+    ctx.font = '11px ' + MONO;
+    ctx.fillText(state.watermark, W - padX, legendY);
+  }
 
   const a = document.createElement('a');
   a.download = '熊坑布局_' + state.center.x + '_' + state.center.y + '.png';
@@ -1892,6 +1906,11 @@ function boot() {
     if (typeof saved.showCoords === 'boolean') {
       state.showCoords = saved.showCoords;
       $('#chkCoords').checked = saved.showCoords;
+    }
+    if (typeof saved.watermark === 'string') {
+      state.watermark = saved.watermark;
+      const wm = $('#inWatermark');
+      if (wm) wm.value = saved.watermark;
     }
     undoStack.length = 0;
     redoStack.length = 0;
