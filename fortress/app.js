@@ -21,11 +21,15 @@ const SAMPLE_NOTICE = '19点开始发奖励 注意通知换盟领取';
 let alliances = SAMPLE_ALLIANCES.slice();
 let rows = SAMPLE_ROWS.map((r, i) => Object.assign({ id: i + 1 }, r));
 let notice = SAMPLE_NOTICE;
+/* 导出图片设置：标题 / 水印副标题 / 页脚署名 */
+let expTitle = '堡垒要塞具体时间人员';
+let expSub = '无尽冬日 · 堡垒开启时间表';
+let expFoot = '永誓盟 · 工具站';
 let nextId = rows.length + 1;
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
 }
 
@@ -39,6 +43,11 @@ function load() {
     rows = o.rows;
     notice = typeof o.notice === 'string' ? o.notice : notice;
     nextId = o.nextId || rows.length + 1;
+    if (o.exp && typeof o.exp === 'object') {
+      expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
+      expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
+      expFoot = typeof o.exp.foot === 'string' ? o.exp.foot : expFoot;
+    }
   } catch (e) { /* 损坏的存档按默认处理 */ }
 }
 
@@ -438,6 +447,17 @@ $('#inNotice').addEventListener('input', e => {
   persist();
 });
 
+/* 导出图片设置输入框 */
+[['expTitle', 'expTitle'], ['expSub', 'expSub'], ['expFoot', 'expFoot']].forEach(([id, key]) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    if (key === 'expTitle') expTitle = el.value.trim();
+    if (key === 'expSub') expSub = el.value.trim();
+    if (key === 'expFoot') expFoot = el.value.trim();
+    persist();
+  });
+});
+
 /* ============ 导出 ============ */
 $('#btnExportCsv').addEventListener('click', () => {
   const lines = ['序号,联盟,堡垒要塞,开启时间,开集结人员'];
@@ -497,10 +517,12 @@ $('#btnExport').addEventListener('click', () => {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
   ctx.font = '800 34px ' + FONT;
-  ctx.fillText('堡垒要塞具体时间人员', W / 2, titleH / 2 - 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.72)';
-  ctx.font = '400 14px ' + FONT;
-  ctx.fillText('无尽冬日 · 堡垒开启时间表', W / 2, titleH / 2 + 24);
+  if (expTitle) ctx.fillText(expTitle, W / 2, titleH / 2 - 10);
+  if (expSub) {
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '400 14px ' + FONT;
+    ctx.fillText(expSub, W / 2, titleH / 2 + 24);
+  }
 
   // 表头
   const headY = titleH;
@@ -603,7 +625,7 @@ $('#btnExport').addEventListener('click', () => {
   ctx.fillStyle = '#9aa7b0';
   ctx.font = '400 13px ' + FONT;
   ctx.textAlign = 'right';
-  ctx.fillText('生成于 ' + stamp + ' · 无尽冬日工具站', W - pad, H - 16);
+  ctx.fillText('生成于 ' + stamp + (expFoot ? ' · ' + expFoot : ''), W - pad, H - 16);
 
   const a = document.createElement('a');
   a.download = '堡垒要塞时间_' + timeStamp() + '.png';
@@ -614,4 +636,7 @@ $('#btnExport').addEventListener('click', () => {
 /* ============ 启动 ============ */
 load();
 $('#inNotice').value = notice;
+$('#expTitle').value = expTitle;
+$('#expSub').value = expSub;
+$('#expFoot').value = expFoot;
 renderAll();
