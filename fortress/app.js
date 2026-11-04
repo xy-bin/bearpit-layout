@@ -42,6 +42,15 @@ function load() {
   } catch (e) { /* 损坏的存档按默认处理 */ }
 }
 
+/* 游戏内固定设施：12 座堡垒 + 4 座要塞，共 16 座 */
+const FORT_NAMES = [];
+for (let n = 1; n <= 12; n++) FORT_NAMES.push(n + ' 号堡垒');
+for (let n = 1; n <= 4; n++) FORT_NAMES.push(n + ' 号要塞');
+
+/* 名称归一化比较（忽略空格） */
+function normFort(s) { return String(s || '').replace(/\s+/g, ''); }
+function isKnownFort(s) { return FORT_NAMES.some(f => normFort(f) === normFort(s)); }
+
 /* 联盟颜色（按名字哈希取柔和色） */
 const AL_COLORS = ['#56c8e8', '#f0c34a', '#38c870', '#ff8fab', '#b48cff', '#ffa05c', '#7ad0ff', '#c0ff8c', '#ff7b6b', '#8ea9ff'];
 function alColor(name) {
@@ -93,21 +102,14 @@ function renderAllianceUI() {
     box.appendChild(chip);
   });
 
-  // 堡垒名建议
+  // 堡垒名建议（固定 16 座）
   const dl = $('#fortList');
   dl.textContent = '';
-  const nums = new Set();
-  rows.forEach(r => { const m = r.fort.match(/^(\d+)\s*号/); if (m) nums.add(+m[1]); });
-  for (let n = 1; n <= 16; n++) {
+  FORT_NAMES.forEach(name => {
     const op = document.createElement('option');
-    op.value = n + ' 号堡垒';
+    op.value = name;
     dl.appendChild(op);
-    if (!nums.has(n)) {
-      const op2 = document.createElement('option');
-      op2.value = n + ' 号要塞';
-      dl.appendChild(op2);
-    }
-  }
+  });
 }
 
 function renderTable() {
@@ -142,9 +144,12 @@ function renderTable() {
     tdFort.textContent = r.fort;
 
     const tdTime = document.createElement('td');
+    tdTime.className = 'td-time';
     const spanT = document.createElement('span');
     spanT.className = 'time-txt' + (r.time ? '' : ' empty');
     spanT.textContent = r.time || '未填';
+    spanT.title = '点击直接修改时间';
+    spanT.addEventListener('click', () => editTimeInline(tdTime, r));
     tdTime.appendChild(spanT);
 
     const tdWho = document.createElement('td');
@@ -214,6 +219,38 @@ function renderAll() {
   renderStats();
 }
 
+/* 行内修改时间：点击时间单元格 → 弹出时间选择器 → 确认即保存 */
+function editTimeInline(td, row) {
+  if (td.querySelector('input')) return;
+  const span = td.querySelector('.time-txt');
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.value = row.time || '';
+  input.className = 'time-edit';
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  let done = false;
+  const commit = save => {
+    if (done) return;
+    done = true;
+    if (save) {
+      row.time = input.value || '';
+      persist();
+      renderTable();
+      renderStats();
+    } else {
+      renderTable();
+    }
+  };
+  input.addEventListener('change', () => commit(true));
+  input.addEventListener('blur', () => commit(true));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+    if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+  });
+}
+
 function move(from, to) {
   if (to < 0 || to >= rows.length || from === to) return;
   const [it] = rows.splice(from, 1);
@@ -227,6 +264,14 @@ function move(from, to) {
 $('#btnAdd').addEventListener('click', () => {
   const fort = $('#fFort').value.trim();
   if (!fort) { alert('请填写堡垒要塞名称'); $('#fFort').focus(); return; }
+  if (!isKnownFort(fort)) {
+    alert('「' + fort + '」不在游戏设施列表中。\n游戏内共 16 座：12 座堡垒（1~12 号）+ 4 座要塞（1~4 号）。');
+    $('#fFort').focus(); return;
+  }
+  if (rows.some(r => normFort(r.fort) === normFort(fort))) {
+    alert('「' + fort + '」已在列表中，可直接在表格里点击时间修改。');
+    return;
+  }
   rows.push({
     id: nextId++,
     al: $('#fAl').value || '',
@@ -240,6 +285,25 @@ $('#btnAdd').addEventListener('click', () => {
   $('#fFort').focus();
   persist();
   renderAll();
+});
+
+/* 一键生成全部 16 座（12 堡垒 + 4 要塞），已存在的跳过 */
+$('#btnInit16').addEventListener('click', () => {
+  const have = new Set(rows.map(r => normFort(r.fort)));
+  let added = 0;
+  FORT_NAMES.forEach(name => {
+    if (have.has(normFort(name))) return;
+    rows.push({ id: nextId++, al: '', fort: name, time: '', who: '' });
+    added++;
+  });
+  if (!added) { alert('16 座设施已全部在列表中。'); return; }
+  persist();
+  renderAll();
+  if (confirm('已生成 ' + added + ' 座设施。要立即按名称顺序排列吗？')) {
+    rows.sort((a, b) => FORT_NAMES.findIndex(f => normFort(f) === normFort(a.fort)) - FORT_NAMES.findIndex(f => normFort(f) === normFort(b.fort)));
+    persist();
+    renderTable();
+  }
 });
 
 $('#btnSortTime').addEventListener('click', () => {

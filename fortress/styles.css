@@ -108,8 +108,11 @@ a { color: var(--teal); }
 .al-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
 .al-name { font-weight: 700; }
 .fort-name { font-weight: 600; }
-.time-txt { font-family: Consolas, monospace; font-size: 15px; color: var(--gold); font-weight: 700; }
+.time-txt { font-family: Consolas, monospace; font-size: 15px; color: var(--gold); font-weight: 700; cursor: pointer; border-bottom: 1px dashed transparent; }
+.time-txt:hover { border-bottom-color: var(--gold); }
 .time-txt.empty { color: var(--txt-dim); font-weight: 400; }
+.td-time { cursor: pointer; }
+.time-edit { background: #0e1622; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px; font-family: Consolas, monospace; font-size: 14px; padding: 3px 6px; color-scheme: dark; }
 .op-btns { display: flex; gap: 6px; }
 .empty { color: var(--txt-dim); text-align: center; padding: 26px 0; font-size: 13.5px; }
 
