@@ -531,3 +531,81 @@ body {
 
 .modal-actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .spacer { flex: 1; }
+
+/* ---------- 触屏 ---------- */
+#map { touch-action: none; }
+
+.ctx-menu {
+  position: absolute;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(159, 232, 255, 0.3);
+  background: rgba(6, 16, 23, 0.97);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.ctx-menu[hidden] { display: none; }
+.ctx-menu button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 11px 12px;
+  border-radius: 7px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctx-menu button:hover, .ctx-menu button:active { background: rgba(86, 200, 232, 0.14); }
+.ctx-menu button.cancel { color: var(--muted); }
+
+/* ---------- 移动端适配 ---------- */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+  .brand { flex: 1; min-width: 0; }
+  .brand-text h1 { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats { font-size: 10px; }
+  .actions { width: 100%; order: 3; flex-wrap: wrap; gap: 6px; }
+  .actions .btn { flex: 1 1 auto; height: 34px; padding: 0 11px; font-size: 12.5px; }
+
+  .page { width: calc(100% - 16px); padding: 10px 0 24px; gap: 10px; }
+  .card { padding: 12px 12px 14px; border-radius: 12px; }
+  .card-desc { font-size: 11.5px; }
+  .section-desc { margin-left: 12px; }
+
+  .canvas-wrap { height: min(62vh, 460px); }
+  .canvas-toolbar { gap: 8px 10px; }
+  .zoom-btn { min-width: 34px; height: 32px; padding: 0 9px; font-size: 15px; }
+  .zoom-val { min-width: 48px; line-height: 32px; font-size: 12px; }
+  .zoom-btn.reset { font-size: 12px; }
+  #ringsSlider { width: 104px; }
+
+  .btn { height: 36px; font-size: 13px; }
+  .btn.teal, .btn.purple, .btn.danger { height: 38px; }
+  .center-row .btn { height: 36px; }
+  .chip-btn { height: 32px; padding: 0 13px; font-size: 12.5px; }
+  .field input { height: 36px; font-size: 14px; }
+  .field textarea { font-size: 13px; }
+  .inline-name { width: 180px; font-size: 13.5px; }
+
+  .placed-list { height: 260px; }
+  .prow { padding: 7px 8px; }
+
+  .footer { flex-direction: column; gap: 4px; text-align: center; padding: 0 12px 12px; }
+
+  .modal-card { width: calc(100vw - 20px); padding: 16px 14px; max-height: 92vh; overflow-y: auto; }
+  #ta { height: 170px; }
+  .modal-row { flex-wrap: wrap; gap: 10px; }
+  .modal-row label { flex: 1 1 40%; }
+  .modal-row input { width: 100%; }
+}
+
+/* 超窄屏（手机竖排表单） */
+@media (max-width: 420px) {
+  .row2 { flex-direction: column; gap: 0; }
+  .center-row .field input { width: 80px; }
+}

@@ -153,7 +153,7 @@ const layoutRingOf = gap => Math.ceil(gap / 2);
 function anchorFor(tile) {
   for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
     const gx = tile.gx + dx, gy = tile.gy + dy;
-    if (blockFits(gx, gy, null)) return { gx, gy };
+    if (blockFits(gx, gy, null)) return { gx, gy, ring: Math.round(Math.max(Math.abs(gx + 0.5), Math.abs(gy + 0.5))) };
   }
   return null;
 }
@@ -1215,9 +1215,11 @@ function setupEvents() {
       state.selectedEmpty = anchorFor(d.hit);
       updateSelEmptyInfo();
       draw();
-      if (state.selectedEmpty) $('#qName').focus();
+      // 触屏后短时间内不自动聚焦（避免页面滚动打断双击/连续点选，也避免频繁弹键盘）
+      if (state.selectedEmpty && Date.now() - lastTouchAt > 600) $('#qName').focus();
     }
   });
+  let lastTouchAt = 0;
 
   /* --- 右键 --- */
   cvs.addEventListener('contextmenu', e => {
@@ -1272,6 +1274,7 @@ function setupEvents() {
 
   /* --- 双击空白 → 原地添加炉子（默认车身，可输入名称） --- */
   cvs.addEventListener('dblclick', e => {
+    if (!$('#inlineName').hidden) return;
     const hit = hitTest(e.clientX, e.clientY);
     if (!hit) return;
     if (memberAt(hit.gx, hit.gy) || facilityBlocked(hit.gx, hit.gy)) return;
@@ -1308,6 +1311,193 @@ function setupEvents() {
     else if (e.key === 'Escape') commitInline(true);
   });
   $('#inlineName').addEventListener('blur', () => commitInline(false));
+
+  /* --- 长按菜单（触屏端替代右键） --- */
+  const ctxMenu = $('#ctxMenu');
+  function hideCtxMenu() { if (ctxMenu) ctxMenu.hidden = true; }
+  function openCtxMenu(hit, cx, cy) {
+    if (!ctxMenu || !hit) return;
+    const items = [];
+    const member = memberAt(hit.gx, hit.gy);
+    if (member) {
+      items.push(['删除成员「' + member.name + '」', () => {
+        pushHistory();
+        state.members = state.members.filter(m => m !== member);
+        if (state.selectedId === member.id) state.selectedId = null;
+        renderAll();
+      }]);
+    }
+    const fi = state.flags.findIndex(f => f.gx === hit.gx && f.gy === hit.gy);
+    if (fi >= 0) {
+      items.push(['删除联盟旗子', () => { pushHistory(); state.flags.splice(fi, 1); renderAll(); }]);
+    }
+    const mi = state.mines.findIndex(m => hit.gx >= m.gx && hit.gx <= m.gx + 1 && hit.gy >= m.gy && hit.gy <= m.gy + 1);
+    if (mi >= 0) {
+      items.push(['删除联盟矿', () => { pushHistory(); state.mines.splice(mi, 1); renderAll(); }]);
+    }
+    if (!member && fi < 0 && mi < 0 && !inPit(hit.gx, hit.gy)) {
+      const dis = state.disabled.has(key(hit.gx, hit.gy));
+      items.push([dis ? '取消禁用格' : '标记禁用格', () => {
+        pushHistory();
+        if (dis) state.disabled.delete(key(hit.gx, hit.gy));
+        else state.disabled.add(key(hit.gx, hit.gy));
+        evictInvalidSeats();
+        renderAll();
+      }]);
+    }
+    if (!items.length) return;
+    items.push(['取消', () => {}]);
+    ctxMenu.innerHTML = '';
+    items.forEach(([label, fn], i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      if (i === items.length - 1) b.className = 'cancel';
+      b.addEventListener('click', () => { hideCtxMenu(); fn(); });
+      ctxMenu.appendChild(b);
+    });
+    const rect = $('#canvasWrap').getBoundingClientRect();
+    ctxMenu.hidden = false;
+    const lx = clamp(cx - rect.left, 8, rect.width - ctxMenu.offsetWidth - 8);
+    const ly = clamp(cy - rect.top, 8, rect.height - ctxMenu.offsetHeight - 8);
+    ctxMenu.style.left = lx + 'px';
+    ctxMenu.style.top = ly + 'px';
+  }
+
+  /* --- 触屏手势：拖动成员/旗子/矿 · 拖空白平移 · 双指捏合缩放 · 长按菜单 · 双击加炉子 --- */
+  if (typeof TouchEvent !== 'undefined') {
+    let t = null;          // 单指状态
+    let pinch = null;      // 双指状态
+    let longTimer = null;
+    let longFired = false;
+    let lastTap = 0, lastTapX = 0, lastTapY = 0;
+    const d2 = (x1, y1, x2, y2) => (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+    const asMouse = (type, x, y) => new MouseEvent(type, { clientX: x, clientY: y, button: 0, bubbles: true });
+    const clearLong = () => { if (longTimer) { clearTimeout(longTimer); longTimer = null; } };
+    const cancelAll = () => {
+      clearLong();
+      if (drag) { drag = null; dragSnap = null; }
+      if (pan) { pan = null; cvs.classList.remove('panning'); }
+      pinch = null; t = null;
+      draw();
+    };
+
+    cvs.addEventListener('touchstart', e => {
+      hideCtxMenu();
+      if (e.touches.length >= 2) {
+        cancelAll();
+        const [a, b] = e.touches;
+        pinch = {
+          d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+          mx: (a.clientX + b.clientX) / 2, my: (a.clientY + b.clientY) / 2
+        };
+        e.preventDefault();
+        return;
+      }
+      const p = e.touches[0];
+      lastTouchAt = Date.now();
+      const hit = hitTest(p.clientX, p.clientY);
+      longFired = false;
+      t = { sx: p.clientX, sy: p.clientY, lx: p.clientX, ly: p.clientY, moved: false, mode: 'pan', emptyHit: null };
+      if (hit) {
+        const isMineHit = state.mines.some(m => hit.gx >= m.gx && hit.gx <= m.gx + 1 && hit.gy >= m.gy && hit.gy <= m.gy + 1);
+        const isFlagHit = state.flags.some(f => f.gx === hit.gx && f.gy === hit.gy);
+        if (isFlagHit || isMineHit || memberAt(hit.gx, hit.gy)) {
+          cvs.dispatchEvent(asMouse('mousedown', p.clientX, p.clientY));
+          t.mode = 'drag';
+          longTimer = setTimeout(() => {
+            longFired = true;
+            if (drag) { drag = null; dragSnap = null; draw(); }
+            openCtxMenu(hit, p.clientX, p.clientY);
+          }, 550);
+        } else {
+          t.mode = 'empty';
+          t.emptyHit = hit;
+          // 长按空格 → 菜单（标记 / 取消禁用格）
+          longTimer = setTimeout(() => {
+            longFired = true;
+            openCtxMenu(hit, p.clientX, p.clientY);
+          }, 550);
+        }
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    cvs.addEventListener('touchmove', e => {
+      if (e.touches.length >= 2) {
+        if (pinch) {
+          const [a, b] = e.touches;
+          const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          const mx = (a.clientX + b.clientX) / 2, my = (a.clientY + b.clientY) / 2;
+          if (d > 0 && pinch.d > 0) {
+            state.view.ox += mx - pinch.mx;
+            state.view.oy += my - pinch.my;
+            const rect = cvs.getBoundingClientRect();
+            zoomAt(mx - rect.left, my - rect.top, d / pinch.d);
+          }
+          pinch.d = d; pinch.mx = mx; pinch.my = my;
+        }
+        e.preventDefault();
+        return;
+      }
+      if (!t) return;
+      const p = e.touches[0];
+      if (!t.moved && d2(p.clientX, p.clientY, t.sx, t.sy) > 144) {
+        t.moved = true;
+        clearLong();
+        if (t.mode === 'empty') {
+          // 空白处拖动 → 平移地图
+          pan = { mx: t.lx, my: t.ly, ox: state.view.ox, oy: state.view.oy };
+          cvs.classList.add('panning');
+          t.mode = 'pan';
+        }
+      }
+      if (t.moved) cvs.dispatchEvent(asMouse('mousemove', p.clientX, p.clientY));
+      t.lx = p.clientX; t.ly = p.clientY;
+      e.preventDefault();
+    }, { passive: false });
+
+    cvs.addEventListener('touchend', e => {
+      clearLong();
+      if (pinch) {
+        if (e.touches.length < 2) pinch = null;
+        e.preventDefault();
+        return;
+      }
+      if (!t) return;
+      const p = e.changedTouches[0];
+      const wasLong = longFired;
+      longFired = false;
+      const mode = t.mode, moved = t.moved, emptyHit = t.emptyHit;
+      t = null;
+      if (wasLong) {
+        if (drag) { drag = null; dragSnap = null; draw(); }
+        e.preventDefault();
+        return;
+      }
+      if (mode === 'drag' || mode === 'pan') {
+        window.dispatchEvent(asMouse('mouseup', p.clientX, p.clientY));
+      } else if (mode === 'empty' && !moved && emptyHit) {
+        const now = Date.now();
+        if (now - lastTap < 400 && d2(p.clientX, p.clientY, lastTapX, lastTapY) < 900) {
+          // 双击空白 → 内联输入加炉子
+          lastTap = 0;
+          cvs.dispatchEvent(asMouse('dblclick', p.clientX, p.clientY));
+        } else {
+          lastTap = now; lastTapX = p.clientX; lastTapY = p.clientY;
+          drag = { mode: 'empty', hit: emptyHit };
+          window.dispatchEvent(asMouse('mouseup', p.clientX, p.clientY));
+        }
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    cvs.addEventListener('touchcancel', cancelAll);
+    window.addEventListener('touchstart', e => {
+      if (!ctxMenu || ctxMenu.hidden) return;
+      if (!ctxMenu.contains(e.target)) hideCtxMenu();
+    }, true);
+  }
 
   /* --- 快速放置 --- */
   $('#qCats').addEventListener('click', e => {
@@ -1942,3 +2132,6 @@ function boot() {
 }
 
 boot();
+
+/* 测试句柄：无头 Chrome 端到端测试用（只读） */
+window.__bearTest = { state, hitTest, tileCenter };

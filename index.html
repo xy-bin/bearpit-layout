@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0a141e" />
 <title>永誓盟 · 工具站</title>
 <style>
   :root {
@@ -109,6 +110,21 @@
   }
   footer a { color: var(--teal); text-decoration: none; }
   footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    header { padding: 44px 0 24px; }
+    h1 { font-size: 29px; }
+    .badge { letter-spacing: 2px; padding: 4px 13px; }
+    .sub { font-size: 13px; }
+    .grid { gap: 14px; padding: 18px 0 28px; }
+    .tool { padding: 20px 18px 18px; }
+    .tool .icon { width: 44px; height: 44px; font-size: 22px; border-radius: 12px; }
+    .tool h2 { font-size: 17.5px; }
+    footer { padding: 20px 0 26px; }
+  }
+  @media (hover: none) {
+    .tool:hover { transform: none; box-shadow: none; }
+  }
 </style>
 </head>
 <body>
