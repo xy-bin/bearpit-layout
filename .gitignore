@@ -17,3 +17,6 @@ _profile/
 # 部署
 .wrangler/
 dist/
+
+# 本地名单导入文件
+熊坑布局_*.csv
