@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>堡垒开启时间 · 无尽冬日工具站</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">垒</div>
+    <div class="brand-text">
+      <h1>堡垒开启时间</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+    <button class="btn ghost" id="btnSortTime" title="按开启时间从早到晚排序（未填时间的排最后）">⏱ 按时间排序</button>
+    <button class="btn ghost" id="btnExportCsv" title="导出 CSV 名单">导出CSV</button>
+    <button class="btn primary" id="btnExport">导出图片</button>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="card">
+    <div class="card-title"><span class="dot gold"></span><h3>公告（导出图片底部红字，可留空）</h3></div>
+    <input id="inNotice" class="notice-input" type="text" maxlength="60" spellcheck="false"
+           placeholder="如：19点开始发奖励 注意通知换盟领取" />
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot teal"></span><h3>添加堡垒</h3></div>
+    <div class="add-row">
+      <label class="field">联盟<select id="fAl"></select></label>
+      <label class="field">堡垒要塞<input id="fFort" list="fortList" type="text" maxlength="20" placeholder="如：3 号要塞" /></label>
+      <datalist id="fortList"></datalist>
+      <label class="field">开启时间<input id="fTime" type="time" /></label>
+      <label class="field grow">开集结人员<input id="fWho" type="text" maxlength="30" placeholder="可选" /></label>
+      <button class="btn primary" id="btnAdd">＋ 添加</button>
+    </div>
+    <div class="al-row">
+      <span class="al-label">联盟管理：</span>
+      <span id="alChips" class="al-chips"></span>
+      <input id="newAl" type="text" maxlength="12" placeholder="新联盟名" spellcheck="false" />
+      <button class="btn ghost" id="btnAddAl">＋ 新增联盟</button>
+    </div>
+    <p class="hint">提示：拖动表格行可手动调整顺序（↑↓ 按钮也可以）；「按时间排序」会覆盖手动顺序。</p>
+  </div>
+
+  <div class="card table-card">
+    <div class="card-title"><span class="dot blue"></span><h3>堡垒时间表</h3><span class="card-stats" id="rowCount"></span></div>
+    <table class="ftable">
+      <thead>
+        <tr><th class="w-drag"></th><th>联盟</th><th>堡垒要塞</th><th class="w-time">时间</th><th>开集给人员</th><th class="w-op">操作</th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>暂无堡垒，请在上方添加</div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <span>拖动排序 · 按时间排序 · 数据仅保存在本机浏览器</span>
+  <span class="sign"><a href="../index.html" style="color:inherit;text-decoration:none">← 无尽冬日工具站</a></span>
+</footer>
+
+<script src="app.js"></script>
+<script>
+window.confirm = function(){ return true; };
+window.alert = function(){};
+window.__names = [];
+HTMLAnchorElement.prototype.click = function(){ if (this.download) window.__names.push(this.download); };
+window.addEventListener('load', function(){
+  setTimeout(async function(){
+    var out = {};
+    try {
+      out.initialRows = rows.length;             // 默认示例 9
+      out.notice = document.getElementById('inNotice').value;
+
+      // 1) 添加一个堡垒
+      document.getElementById('fAl').value = 'VOE';
+      document.getElementById('fFort').value = '9 号堡垒';
+      document.getElementById('fTime').value = '08:30';
+      document.getElementById('fWho').value = '测试员';
+      document.getElementById('btnAdd').click();
+      out.afterAdd = rows.length;
+
+      // 2) 按时间排序：08:30 应排第一
+      document.getElementById('btnSortTime').click();
+      out.firstAfterSort = rows[0].fort + '@' + rows[0].time;
+
+      // 3) 拖拽排序：把第一行拖到第三行（用 move 模拟 drop 逻辑同源）
+      move(0, 2);
+      out.firstAfterDrag = rows[0].fort + '@' + rows[0].time;
+      out.thirdAfterDrag = rows[2].fort + '@' + rows[2].time;
+
+      // 4) 新增联盟
+      document.getElementById('newAl').value = 'XYZ';
+      document.getElementById('btnAddAl').click();
+      out.alliances = alliances.join('|');
+
+      // 5) 导出
+      document.getElementById('btnExportCsv').click();
+      document.getElementById('btnExport').click();
+      out.exportNames = window.__names.join('|');
+      out.csvOk = /^堡垒要塞时间_\d{12}\.csv$/.test(window.__names[0] || '');
+      out.pngOk = /^堡垒要塞时间_\d{12}\.png$/.test(window.__names[1] || '');
+
+      // 6) 持久化检查
+      var raw = localStorage.getItem('fortress.layout.v1');
+      out.storedRows = raw ? JSON.parse(raw).rows.length : -1;
+    } catch (e) { out.error = e.message; }
+    var d = document.createElement('div');
+    d.id = 'tres';
+    d.textContent = 'TRESULT:' + JSON.stringify(out);
+    document.body.appendChild(d);
+  }, 150);
+});
+</script></body>
+</html>
