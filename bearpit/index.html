@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="03hlBp2eBWNka4QCEALV6J">
+<head data-page-node-id="OdR0XfurwrZ69fVM4qvnge">
+<meta charset="UTF-8" data-page-node-id="0lSGqoPP07IrZDgKdYtfmD" />
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="BquSqdc1d4GwEgDSBh7oV5" />
+<title>联盟熊坑布局规划</title>
+<link rel="stylesheet" href="styles.css" data-page-node-id="pNnVv6tr6UXMWJUwxeRsjE" />
+</head>
+<body data-page-node-id="QmyOHDufGCvAQMu6fgPbwu">
+<div class="app" data-page-node-id="x5sXZea6l0tTg7CAIK42DZ">
+
+  <header class="topbar" data-page-node-id="VoIzxMvTlxjxvcN6BItxgC">
+    <div class="brand" data-page-node-id="XsUOGvhJI8ugbJsm8yAZie">
+      <div class="logo" data-page-node-id="MRHzmdNNMB0EUQ15cGNGdX">熊</div>
+      <div class="brand-text" data-page-node-id="tkoWKRudBByzVhlJOGCo8X">
+        <h1 data-page-node-id="sEf04vqqX8WA8SEjNLSUJ9">联盟熊坑布局规划</h1>
+        <div class="stats" id="stats" data-page-node-id="r25phlXZSEXGqizJN5ySpC"></div>
+      </div>
+    </div>
+    <div class="actions" data-page-node-id="DVL962Cnjlcsx1D1kamCHM">
+      <button class="btn ghost" id="btnAuto" title="按距离重新分配座位" data-page-node-id="xXDXAvdTlEMTPAEYiOcbTB">自动紧凑排位</button>
+      <button class="btn ghost" id="btnImport" data-page-node-id="CMHOwx2KxXFo8dx0h4BqT7">粘贴名单</button>
+      <button class="btn ghost" id="btnExportRoster" title="按「熊坑布局_中心.csv」模板导出（含占地格、圈层、距离）">导出CSV</button>
+      <button class="btn primary" id="btnExport" data-page-node-id="OdTBdWRUwzrLrqz1Dlm6sY">导出图片</button>
+    </div>
+  </header>
+
+  <main class="page" data-page-node-id="jM0M6y1ba35xSJjPuQYHBU">
+
+    <!-- 说明卡 -->
+    <div class="card info-card" data-page-node-id="rH83pj7V3YeOQqFp0GmzRB">
+      <div class="card-title" data-page-node-id="VbZLWzNetePJ29JMZgaEB1">
+        <span class="dot" data-page-node-id="g0zJGVcU7DG7cGY3xHF4ws"></span>
+        <h3 data-page-node-id="S6OSndhC1yojpUn1U8E2Zx">联盟熊坑布局规划</h3>
+      </div>
+      <p class="card-desc" data-page-node-id="eq0CCFMkeZTcfv6cE4dJB1">以熊坑中心坐标为基准进行 45° 等距排位；1 个坐标 = 1 个单元格；城镇（炉子）占 2×2=4 格，联盟旗子占 1 格（可添加多面，互相不能重叠），熊坑占 3×3=9 格；改中心坐标后整套布局自动平移。所有编辑功能都移到画布下方，页面可持续向下滚动，在小窗口和高 DPI 下不再挤压画布。</p>
+      <div class="chips" data-page-node-id="TjHHRvuMrXhaKOJRq2U4Nw">
+        <span class="chip" data-page-node-id="WlHlmYdfx3QS2G2ihRjXTc"><i class="chip-dot gold" data-page-node-id="sYDdcZMFBKGFXDkfnyH6kx"></i>熊坑 <b data-page-node-id="WbDxHTiHJfC1BIcr9m3htT">中心点·9格</b></span>
+        <span class="chip" data-page-node-id="cnlvpF1G6l6DwWuhWK0TTD"><i class="chip-dot orange" data-page-node-id="s6CyQHoQLgiB1xLB2i5th3"></i>城镇(炉子) <b data-page-node-id="1nHsl7kaGAjhF41hBU2Bz8">2×2·4格</b></span>
+        <span class="chip" data-page-node-id="vGzAoPTd2e77pMrjXj0iTr"><i class="chip-dot purple" data-page-node-id="FtoNbrzhigEDp7sIP1BnJV"></i>联盟旗子 <b data-page-node-id="kjC03eP8APhuGUeUxSWJuq">1×1·1格</b></span>
+        <span class="chip"><i class="chip-dot red"></i>联盟矿 <b>2×2·4格·不可放炉子</b></span>
+        <span class="chip" data-page-node-id="ySxqBXCxwc5Byxl4recAga"><i class="chip-dot cyan" data-page-node-id="gCW63NRJlC58PJEVS65sGT"></i>方向 <b data-page-node-id="OljdfnoQx04F8mjXSS0eDi">X↗ / Y↘</b></span>
+        <span class="chip" data-page-node-id="ORngWN66RSsmRDvndqWVg3"><i class="chip-dot green" data-page-node-id="pNgNhsbrciGOSlyW50eoHT"></i>编辑 <b data-page-node-id="pTKNBa9m6gwMspq6OwdYEr">拖动 / 擦除</b></span>
+      </div>
+      <label class="field block" style="max-width:420px">导出图片水印（留空则不显示水印）<input id="inWatermark" type="text" maxlength="40" spellcheck="false" placeholder="如：某某联盟 · 熊坑落位图" /></label>
+    </div>
+
+    <!-- 中心坐标卡 -->
+    <div class="card" data-page-node-id="K9Z3n7aVSHBAbCtwPt3rh6">
+      <div class="card-title" data-page-node-id="bEsET6LCKjkSfNVSXFl1E7">
+        <span class="dot" data-page-node-id="Ba8LZq0VkvsXnWFrEhQROh"></span>
+        <h3 data-page-node-id="8xQQMYeGVAtIjnOKj82hGF">熊坑中心坐标</h3>
+      </div>
+      <p class="card-desc" data-page-node-id="jrCtHmMfmCsebZfuaX3K4h">这里填写的是游戏中<b data-page-node-id="04c1LS4n81tVauSvIFadDW">熊坑的中心坐标</b>，不是左上角。不同联盟熊坑位置不同；输入新中心后，已排成员、禁用格和导出坐标都会按相同偏移自动修正。</p>
+      <div class="center-row" data-page-node-id="YZMPIFnqqOozYrGg7IYsk3">
+        <label class="field" data-page-node-id="o0C2D6NzeIlXfWHRASDhEm">中心 X<input id="inCX" type="number" value="628" data-page-node-id="7OGgvcyZhZJQwkgp0RFOml" /></label>
+        <label class="field" data-page-node-id="y1VK1Not6jH3MSiZyKYCVB">中心 Y<input id="inCY" type="number" value="523" data-page-node-id="nsqmVOuntx6acFzKmuaqcw" /></label>
+        <button class="btn primary" id="btnApplyCenter" data-page-node-id="vnjeSSs1nHqivWMRRj7oQL">应用并自动矫正全部坐标</button>
+        <button class="btn ghost" id="btnUndo" title="撤销上一步" data-page-node-id="NRk3pr28KRyP9c54YPhctr">撤销</button>
+        <button class="btn ghost" id="btnRedo" title="恢复被撤销的一步" data-page-node-id="63OKN8Qr9AmbcC3mDQoqBc">恢复</button>
+      </div>
+    </div>
+
+    <!-- 布局画布 -->
+    <div class="card canvas-card" data-page-node-id="Oq0QRl3dzkTMMTLNT0qB8G">
+      <div class="card-title" data-page-node-id="PDiJUzHHpDKXs8T7jRtiZA">
+        <span class="dot" data-page-node-id="FEsJi4psn7V6Y0UWQcxtsa"></span>
+        <h3 data-page-node-id="WpnduFGN6eCL5NTFcBHAtC">布局画布</h3>
+        <span class="card-stats" id="canvasStats" data-page-node-id="EubZaiGZqnkUlE0UCV0iXW"></span>
+      </div>
+      <p class="card-desc" data-page-node-id="jtN77gdHqCdGCN5HS5X8Sp">点击空白位选中 2×2 空位后在下方填写名字放置；拖动成员换位（拖到他人身上即交换）；右键成员删除；Shift+右键空白标记禁用；中键拖动地图；Ctrl+滚轮或工具栏「＋ / −」缩放，点百分比或「重置」恢复 100% 居中。</p>
+      <div class="canvas-toolbar" data-page-node-id="HNgXPGderjL6s33Y7iUueG">
+        <span class="tool-label" data-page-node-id="2bOzzGF5LETznvu78rAutb">地图缩放</span>
+        <div class="zoom-group" data-page-node-id="UGWID1AcSq0ECdFnSs8UJj">
+          <button class="zoom-btn" id="btnZoomOut" title="缩小地图" data-page-node-id="VDsLDH1RfN6S2JCWINU2uC">−</button>
+          <span class="zoom-val" id="zoomLabel" data-page-node-id="2kYwuzae1qyVARoTmRsgpg">100%</span>
+          <button class="zoom-btn" id="btnZoomIn" title="放大地图" data-page-node-id="bJBY1ZZTBvTa8AjnnZWRfC">＋</button>
+          <button class="zoom-btn reset" id="btnZoomReset" title="恢复 100% 并居中" data-page-node-id="mPLUcaXNuqrCHnZgK5tPxJ">重置</button>
+        </div>
+        <span class="tool-sep" data-page-node-id="LrWr42LBPr5kXpOD5yuC1X"></span>
+        <span class="tool-label" data-page-node-id="Pp9HFEYMsmrKAyXrZb4as7">地图圈数</span>
+        <input id="ringsSlider" type="range" min="3" max="14" step="1" value="12" data-page-node-id="Iiw5Hqz0fRqyPySFOaBzts" />
+        <b id="ringsLabel" data-page-node-id="mEbYbeoSGOvJlcoSWj8Aow">12</b>
+        <label class="tool-check" data-page-node-id="NEGoLggqEPp7XyjegAHhH2">
+          <input id="chkCoords" type="checkbox" data-page-node-id="CFDwBBCpJWBvngeSDCXlvD" />
+          显示每座坐标格
+        </label>
+        <span class="tool-sep"></span>
+        <button class="btn danger" id="btnClearTowns" title="清空全部城镇（炉子）；熊坑、联盟旗子、禁用格保留，可撤销">清空城镇（炉子）</button>
+        <button class="btn teal" id="btnRefreshData" title="从线上拉取最新内置名单并覆盖当前布局（可撤销）">更新最新数据</button>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap" data-page-node-id="YB28lV1rKuS0fd8oI6CpxK">
+        <canvas id="map" data-page-node-id="wZ2qzIqjRFVeyHesWqpXuW"></canvas>
+        <div class="tip" id="tip" hidden data-page-node-id="HYGypOpzjqc4FeH8VBMAPF"></div>
+        <input id="inlineName" class="inline-name" maxlength="20" spellcheck="false"
+               placeholder="炉子名称，回车确认 / Esc 取消" hidden />
+      </div>
+      <div class="legend" id="legend" data-page-node-id="oY6bg2AIG6kx90K2n5131i"></div>
+    </div>
+
+    <!-- 排位与成员管理 -->
+    <div class="section-head" data-page-node-id="7eP98ocKzjaIGcoUVyIDZn">
+      <span class="dot big" data-page-node-id="VPw4tWh7UEkLuwLGPLDcdj"></span>
+      <h2 data-page-node-id="VnUZYtp8wW28OEPB80nhRB">排位与成员管理</h2>
+    </div>
+    <p class="section-desc" data-page-node-id="qQoAA2X1tHwMH97zDGcg2o">所有编辑功能都移到画布下方，页面可持续向下滚动；在小窗口和高 DPI 下不再挤压画布。</p>
+
+    <div class="grid2" data-page-node-id="YpP9eN74v8rcUdizruP9Mu">
+      <!-- 快速放置 -->
+      <div class="card" data-page-node-id="2c1OREkLxnz9qL2PQJVXb2">
+        <div class="card-title" data-page-node-id="uWASFIfH1JUv6DiZlzp2On"><h3 data-page-node-id="rGgXLXIqSwaBV99qgD5HlW">快速放置</h3></div>
+        <p class="card-desc" data-page-node-id="AcfXuJ9ykaJA7HNo7GylzK">先在画布点一个可放置位（自动吸附为 2×2），再填写游戏名。分类只用于颜色与图例：地球 / 陨石 / 车身 / 预留。</p>
+        <label class="field block" data-page-node-id="qEN5IQVWg8il5qWVu8DyeD">游戏名<input id="qName" type="text" maxlength="20" spellcheck="false" placeholder="待放置…" data-page-node-id="uBkUuF1OBuDeNszAm7T9CT" /></label>
+        <div class="field-label" data-page-node-id="lEYVGXUFp3IGj57F94AITq">布局分类</div>
+        <div class="chip-btns" id="qCats" data-page-node-id="TCrRt774EBa1u4odzobTea">
+          <button class="chip-btn" data-cat="地球" data-page-node-id="qr6dxAQWIv00rkFPT8OJ5F">地球</button>
+          <button class="chip-btn" data-cat="陨石" data-page-node-id="WEyuuGDQ1s6k6HGyHd4Ddf">陨石</button>
+          <button class="chip-btn active" data-cat="车身" data-page-node-id="Ilvn7CHblC4yVp5KBo0s4B">车身</button>
+          <button class="chip-btn" data-cat="预留" data-page-node-id="LlsuLdp0YEDY6DhPl1okv8">预留</button>
+        </div>
+        <label class="field block" data-page-node-id="Mo0ceg27mRkytnhhxBAlNL">备注（可选）<textarea id="qNote" rows="2" spellcheck="false"></textarea></label>
+        <div class="sel-info" id="selEmptyInfo" data-page-node-id="d1Oa3b4OXpMnDhG2WPKc2D">未选择空位：请在画布上点击一个空格</div>
+        <div class="btn-col" data-page-node-id="TmUPuhdb8lLwhH7qpGZXLX">
+          <button class="btn teal" id="btnPlace" data-page-node-id="Do4tJCRCnZ3T7KA9UKkxzZ">确认放置到已选空位</button>
+          <button class="btn purple" id="btnFlag" data-page-node-id="jB8be0Lm4nw16HQVxz6ylw">添加联盟旗子（1格·可多个）</button>
+          <button class="btn danger" id="btnMine" title="在已选空位放置红色联盟矿（2×2），矿上不可放炉子">放置联盟矿（2×2·红·不可放炉子）</button>
+          <p class="hint" style="margin:2px 0 0">提示：双击画布空白处可直接添加炉子（默认车身，可输入名称）。</p>
+        </div>
+      </div>
+
+      <!-- 批量连续排位 -->
+      <div class="card" data-page-node-id="fknqxcB723iYMmNw87rp0y">
+        <div class="card-title" data-page-node-id="Da6rBP30BRV47exE34EBY3"><h3 data-page-node-id="auxLsbBhpeAOpPHOcUpSyW">批量连续排位</h3></div>
+        <p class="card-desc" data-page-node-id="B4kej7GMETYaHAT4ftiirS">每行一个游戏名，加入待排后，每点击一个空位自动放置一个 2×2 城镇；也可以在队列里点名字把它移出。</p>
+        <textarea id="batchText" rows="5" spellcheck="false" placeholder="张三&#10;李四&#10;★王五"></textarea>
+        <div class="btn-row" data-page-node-id="yJjwEzgkhcltaAlkrfOw6C">
+          <button class="btn teal" id="btnEnqueue" data-page-node-id="AUVt5EA1FV7G7AZgfhrfxt">加入待排</button>
+          <button class="btn primary" id="btnCompact" data-page-node-id="xp7OGPRDzZaualjcGB287s">自动紧凑排位</button>
+        </div>
+        <div class="queue-box" id="queueBox" data-page-node-id="O3n33tjnv7xHagffGoDaa6"></div>
+      </div>
+    </div>
+
+    <div class="grid2" data-page-node-id="23nswn10903L0xmzL5Ozgb">
+      <!-- 成员编辑 -->
+      <div class="card" data-page-node-id="7BA6JjdSKncczuqHxQeb0H">
+        <div class="card-title" data-page-node-id="GkipadibUH8IC0o4iBQVZ9"><h3 data-page-node-id="RKxWAhyEqQkgvRvLN4o3LG">成员编辑</h3></div>
+        <p class="card-desc" id="editHint" data-page-node-id="8B9dcZTpSRRx57wKCzRDVW">点击地图中的成员城镇，可查看名称、分类、备注；目标坐标为 2×2 的左上格。</p>
+        <label class="field block" data-page-node-id="PpB6xq1J5Uc7WAvcHwAkeo">游戏名称<input id="eName" type="text" maxlength="20" spellcheck="false" placeholder="未选择成员" disabled data-page-node-id="kQQEYFFeakwOyov5FSlCoQ" /></label>
+        <div class="field-label" data-page-node-id="r3zV89F2EO4nTkNUqxCkSA">布局分类</div>
+        <div class="chip-btns" id="eCats" data-page-node-id="QjA7xuQMuiiWvgRWCaLGbg">
+          <button class="chip-btn" data-cat="地球" disabled data-page-node-id="jJ2KEVLj6Rfnio6OrzQv9G">地球</button>
+          <button class="chip-btn" data-cat="陨石" disabled data-page-node-id="e113N2JD4FgVPLmwR4f3Gi">陨石</button>
+          <button class="chip-btn active" data-cat="车身" disabled data-page-node-id="MaZOrBEt8epg5aPBafD8gR">车身</button>
+          <button class="chip-btn" data-cat="预留" disabled data-page-node-id="kdHODBig51oK8Vgq29mxw0">预留</button>
+        </div>
+        <div class="row2" data-page-node-id="hQHhhbYeMaO4kWzs90EaAV">
+          <label class="field block" data-page-node-id="3uQ6rdy4HUAgDnO9RpZDOz">目标 X<input id="eX" type="number" disabled data-page-node-id="YtWf4anSzbLMOqRDYkQ9S9" /></label>
+          <label class="field block" data-page-node-id="XBYPsr8ogZeQ6UI2YSPDwv">目标 Y<input id="eY" type="number" disabled data-page-node-id="31a1VsNNqFjQx50UIiKQ27" /></label>
+        </div>
+        <label class="field block" data-page-node-id="Z59e6Mi7zTymyRQgvK1GwA">备注<textarea id="eNote" rows="2" spellcheck="false" disabled></textarea></label>
+        <div class="btn-row" data-page-node-id="5rTFxiIQuF6ONuLN54rgvA">
+          <button class="btn teal" id="btnEditApply" disabled data-page-node-id="2paBgBaUYdJCusxw2wfdQ4">应用修改</button>
+          <button class="btn danger" id="btnEditDelete" disabled data-page-node-id="CRemxAEQVa0OsL4JKkimM8">删除成员</button>
+        </div>
+      </div>
+
+      <!-- 已排成员 -->
+      <div class="card" data-page-node-id="RhTztFhmYLHU4rx6UTutf1">
+        <div class="card-title" data-page-node-id="RBw9U6LVSqbKOWafqK725t"><h3 data-page-node-id="hOko8F8scSsxHXaVrOCbPG">已排成员</h3><span class="card-stats" id="placedCount" data-page-node-id="yCu0wVRjB4MhRvKTyYordy"></span></div>
+        <p class="card-desc" data-page-node-id="p8fUtAAkCRYNYl1bzLkd6Q">单击列表项选中并在左侧编辑；双击会自动将该成员移到画布中央，方便大范围查找。</p>
+        <div class="search-wrap" data-page-node-id="lEaLbbfTeuFCoHZHw6Ny3y">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" data-page-node-id="Su6zFBgECvuLyGloho0Kud">
+            <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4" data-page-node-id="CviN2mdNmuUCrgpKCFKkNM"/>
+            <path d="M10.6 10.6L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" data-page-node-id="FzGf0X4iVnFTAqxYIOPkHA"/>
+          </svg>
+          <input id="search" type="text" placeholder="搜索成员…" spellcheck="false" data-page-node-id="3q25DHkFTINvnHSuIe0g6D" />
+        </div>
+        <div class="placed-list" id="placedList" data-page-node-id="sJkMGqE6FqctDwXaOJ6Zas"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer" data-page-node-id="NRohErZ7fV2evXIM2gWQsc">
+    <span data-page-node-id="ebeS8IAW9MCHQbF5DFXQgf">城镇(炉子)占2×2 · 旗子占1格 · 熊坑占3×3 · 分类只用于颜色与图例 · 数据仅保存在本机浏览器<span id="dataVer"></span></span>
+    <span class="sign" data-page-node-id="wv7f2ufs0eG1syGrF3GGnq">熊坑落位 · 网页复刻版</span>
+  </footer>
+
+</div>
+
+<!-- 导入弹窗 -->
+<div class="modal" id="modal" hidden data-page-node-id="Xi38ioU2S5mYBQ3QIypoyG">
+  <div class="modal-card" data-page-node-id="1ikr47PRNFSxNImCZ1RHHv">
+    <h3 data-page-node-id="iK6TvYAU8jrRVTDD0VqG0G">导入名单 / 布局 CSV</h3>
+    <p class="hint" data-page-node-id="5QBxMGmx3ckQj1DACFk5O4">① 直接选择「熊坑布局_628_523.csv」这类 CSV 文件，或把内容粘贴到下面；CSV 会按目标坐标精确落位（城镇 2×2 / 旗子 1 格）。<br>② 也支持纯名单文本：每行「名字 628,523」或「628,523 名字」，行首 ★ 表示旗子。</p>
+    <div class="file-row">
+      <label class="btn ghost file-btn" for="fileRoster">选择 CSV / TXT 文件</label>
+      <input id="fileRoster" type="file" accept=".csv,.txt,text/csv,text/plain" hidden />
+      <span class="file-name" id="fileName">未选择文件</span>
+    </div>
+    <textarea id="ta" spellcheck="false" placeholder="Aaron 625,525&#10;★王十一 635,527&#10;深渊 635,515"></textarea>
+    <div class="modal-row" data-page-node-id="EF3zCBoEFGNXpMd0Uu3mEk">
+      <label data-page-node-id="xJ4TAYpUObj0zchCiVExNF">熊坑中心
+        <input id="inCenter" type="text" value="628,523" spellcheck="false" data-page-node-id="MxJzPu5ZKpFCyxQF9IAdvv" />
+      </label>
+      <label data-page-node-id="01TdZILtnRpqxDgQbAQ5Py">圈数（留空自动）
+        <input id="inRings" type="number" min="2" max="14" placeholder="自动" data-page-node-id="7DHvjCO1zc25pKJEHucqBM" />
+      </label>
+    </div>
+    <div class="modal-actions" data-page-node-id="aH8dS6dwcgCq4VcL0Irh5C">
+      <button class="btn ghost" id="btnSample" data-page-node-id="MW7FiR09QnfDP8Dab0DP0t">载入示例</button>
+      <span class="spacer" data-page-node-id="yZRSilMrgr9bE7GBs44nO3"></span>
+      <button class="btn ghost" id="btnCancel" data-page-node-id="Zv6ROEEyuxCz5sPNid5C3V">取消</button>
+      <button class="btn primary" id="btnApply" data-page-node-id="Z6mB9wODnIBWvPO8dgArNB">解析并落位</button>
+    </div>
+  </div>
+</div>
+
+<script src="core.js"></script>
+<script src="default-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,3 +1,13 @@
+# 无尽冬日工具站（Whiteout Survival Tools）
+
+无尽冬日（Whiteout Survival）联盟管理 / 战场规划小工具集合，纯前端静态站点，托管于 Cloudflare Pages。
+
+当前收录：
+
+- **熊坑落位图**（`/bearpit/`）—— 等距网格排位工具，详见下方说明
+
+---
+
 # 联盟熊坑布局规划（无尽冬日）
 
 一个纯前端的等距菱形网格落位工具：以「熊坑中心坐标」为基准，把联盟成员的城镇（炉子）、联盟旗子、联盟矿排布在 45° 等距网格上，并可导出布局图片与 CSV 名单。
@@ -38,13 +48,17 @@ npx serve .
 ## 目录结构
 
 ```
-index.html        页面结构
-styles.css        样式
-core.js           纯算法模块（座位/2×2 块/圈层/CSV 解析与生成），Node 与浏览器通用
-app.js            画布渲染、交互、导入导出、localStorage 自动保存
-default-data.js   内置默认布局数据（首次打开时加载）
-core.test.js      算法单测（node core.test.js）
+index.html            工具站首页（导航）
+bearpit/              熊坑落位图工具
+  index.html            页面结构
+  styles.css            样式
+  core.js               纯算法模块（座位/2×2 块/圈层/CSV 解析与生成），Node 与浏览器通用
+  app.js                画布渲染、交互、导入导出、localStorage 自动保存
+  default-data.js       内置默认布局数据（首次打开时加载；「更新最新数据」按钮拉取本文件）
+  core.test.js          算法单测（node bearpit/core.test.js）
 ```
+
+访问路径：首页 `/`，熊坑工具 `/bearpit/`。
 
 ## 部署到 Cloudflare Pages
 
