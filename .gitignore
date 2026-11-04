@@ -1,0 +1,19 @@
+# 工作区 / 编辑器相关
+.workbuddy/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 依赖
+node_modules/
+
+# 测试临时产物
+_test.html
+_dom.html
+_chrome.log
+_profile/
+
+# 部署
+.wrangler/
+dist/
