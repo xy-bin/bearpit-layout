@@ -47,6 +47,28 @@ const FORT_NAMES = [];
 for (let n = 1; n <= 12; n++) FORT_NAMES.push(n + ' 号堡垒');
 for (let n = 1; n <= 4; n++) FORT_NAMES.push(n + ' 号要塞');
 
+/* 开启时间段：仅 5 个节点，可另选加 0~55 分钟（如 15:00 + 15分 = 15:15） */
+const TIME_SLOTS = ['10:00', '12:00', '15:00', '19:30', '21:00'];
+const MIN_OPTIONS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+function slotMinutes(s) { const p = s.split(':'); return (+p[0]) * 60 + (+p[1]); }
+function composeTime(slot, off) {
+  if (!slot) return '';
+  const t = slotMinutes(slot) + (+off || 0);
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+}
+/* 把已有时间拆回「节点 + 加分钟」，便于编辑时回显 */
+function decomposeTime(t) {
+  if (!t) return { slot: '', off: 0 };
+  const p = t.split(':');
+  const T = (+p[0]) * 60 + (+p[1]);
+  let node = TIME_SLOTS[0];
+  TIME_SLOTS.forEach(s => { if (slotMinutes(s) <= T) node = s; });
+  let off = T - slotMinutes(node);
+  if (off < 0) off = 0;
+  if (off > 55) off = 55;
+  return { slot: node, off: Math.round(off / 5) * 5 };
+}
+
 /* 名称归一化比较（忽略空格） */
 function normFort(s) { return String(s || '').replace(/\s+/g, ''); }
 function isKnownFort(s) { return FORT_NAMES.some(f => normFort(f) === normFort(s)); }
@@ -219,36 +241,56 @@ function renderAll() {
   renderStats();
 }
 
-/* 行内修改时间：点击时间单元格 → 弹出时间选择器 → 确认即保存 */
+/* 行内修改时间：点击时间单元格 → 出现「时间节点 + 加分钟」下拉 → 选完即保存 */
 function editTimeInline(td, row) {
-  if (td.querySelector('input')) return;
-  const span = td.querySelector('.time-txt');
-  const input = document.createElement('input');
-  input.type = 'time';
-  input.value = row.time || '';
-  input.className = 'time-edit';
+  if (td.querySelector('select')) return;
+  const cur = decomposeTime(row.time);
   td.textContent = '';
-  td.appendChild(input);
-  input.focus();
-  let done = false;
-  const commit = save => {
-    if (done) return;
-    done = true;
-    if (save) {
-      row.time = input.value || '';
-      persist();
-      renderTable();
-      renderStats();
-    } else {
-      renderTable();
-    }
-  };
-  input.addEventListener('change', () => commit(true));
-  input.addEventListener('blur', () => commit(true));
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(true); }
-    if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+  const box = document.createElement('div');
+  box.className = 'time-edit-box';
+
+  const selSlot = document.createElement('select');
+  selSlot.className = 'time-edit';
+  const opNone = document.createElement('option');
+  opNone.value = ''; opNone.textContent = '未填';
+  selSlot.appendChild(opNone);
+  TIME_SLOTS.forEach(s => {
+    const op = document.createElement('option');
+    op.value = s; op.textContent = s;
+    selSlot.appendChild(op);
   });
+  selSlot.value = cur.slot;
+
+  const selMin = document.createElement('select');
+  selMin.className = 'time-edit';
+  MIN_OPTIONS.forEach(m => {
+    const op = document.createElement('option');
+    op.value = String(m); op.textContent = '+' + String(m).padStart(2, '0');
+    selMin.appendChild(op);
+  });
+  selMin.value = String(cur.off);
+
+  const commit = () => {
+    row.time = composeTime(selSlot.value, selMin.value);
+    persist();
+    renderTable();
+    renderStats();
+  };
+  selSlot.addEventListener('change', commit);
+  selMin.addEventListener('change', commit);
+  /* 点到别处未做修改 → 恢复显示 */
+  selSlot.addEventListener('blur', () => setTimeout(() => {
+    if (!td.contains(document.activeElement)) renderTable();
+  }, 120));
+  selMin.addEventListener('blur', () => setTimeout(() => {
+    if (!td.contains(document.activeElement)) renderTable();
+  }, 120));
+  selSlot.addEventListener('keydown', e => { if (e.key === 'Escape') renderTable(); });
+  selMin.addEventListener('keydown', e => { if (e.key === 'Escape') renderTable(); });
+
+  box.append(selSlot, selMin);
+  td.appendChild(box);
+  selSlot.focus();
 }
 
 function move(from, to) {
@@ -261,6 +303,25 @@ function move(from, to) {
 }
 
 /* ============ 事件 ============ */
+/* 时间节点 / 加分钟下拉（添加表单用） */
+(function initTimeSelects() {
+  const slot = $('#fSlot'), min = $('#fMin');
+  const opNone = document.createElement('option');
+  opNone.value = ''; opNone.textContent = '— 未填 —';
+  slot.appendChild(opNone);
+  TIME_SLOTS.forEach(s => {
+    const op = document.createElement('option');
+    op.value = s; op.textContent = s;
+    slot.appendChild(op);
+  });
+  slot.value = '10:00';
+  MIN_OPTIONS.forEach(m => {
+    const op = document.createElement('option');
+    op.value = String(m); op.textContent = '+' + String(m).padStart(2, '0') + ' 分';
+    min.appendChild(op);
+  });
+})();
+
 $('#btnAdd').addEventListener('click', () => {
   const fort = $('#fFort').value.trim();
   if (!fort) { alert('请填写堡垒要塞名称'); $('#fFort').focus(); return; }
@@ -276,11 +337,12 @@ $('#btnAdd').addEventListener('click', () => {
     id: nextId++,
     al: $('#fAl').value || '',
     fort: fort,
-    time: $('#fTime').value || '',
+    time: composeTime($('#fSlot').value, $('#fMin').value),
     who: $('#fWho').value.trim()
   });
   $('#fFort').value = '';
-  $('#fTime').value = '';
+  $('#fSlot').value = '10:00';
+  $('#fMin').value = '0';
   $('#fWho').value = '';
   $('#fFort').focus();
   persist();

@@ -38,7 +38,8 @@
       <label class="field">联盟<select id="fAl"></select></label>
       <label class="field">堡垒要塞<input id="fFort" list="fortList" type="text" maxlength="20" placeholder="如：3 号要塞" /></label>
       <datalist id="fortList"></datalist>
-      <label class="field">开启时间<input id="fTime" type="time" /></label>
+      <label class="field">时间节点<select id="fSlot"></select></label>
+      <label class="field">加几分钟<select id="fMin"></select></label>
       <label class="field grow">开集结人员<input id="fWho" type="text" maxlength="30" placeholder="可选" /></label>
       <button class="btn primary" id="btnAdd">＋ 添加</button>
     </div>
@@ -48,7 +49,7 @@
       <input id="newAl" type="text" maxlength="12" placeholder="新联盟名" spellcheck="false" />
       <button class="btn ghost" id="btnAddAl">＋ 新增联盟</button>
     </div>
-    <p class="hint">提示：游戏内共 16 座设施（12 堡垒 + 4 要塞）；点表格里的时间可直接修改；拖动表格行可手动调整顺序（↑↓ 按钮也可以）；「按时间排序」会覆盖手动顺序。</p>
+    <p class="hint">提示：开启时间段仅 5 个节点（10:00 / 12:00 / 15:00 / 19:30 / 21:00），可另加 0~55 分钟（如 15:00 + 15 = 15:15）；游戏内共 16 座设施（12 堡垒 + 4 要塞）；点表格里的时间可直接修改；拖动表格行可手动调整顺序（↑↓ 按钮也可以）；「按时间排序」会覆盖手动顺序。</p>
     <div class="al-row">
       <button class="btn ghost" id="btnInit16" title="生成全部 16 座设施（12 堡垒 + 4 要塞），已有的跳过">📋 一键生成 16 座（12 堡垒 + 4 要塞）</button>
     </div>

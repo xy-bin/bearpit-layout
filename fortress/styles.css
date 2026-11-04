@@ -112,7 +112,8 @@ a { color: var(--teal); }
 .time-txt:hover { border-bottom-color: var(--gold); }
 .time-txt.empty { color: var(--txt-dim); font-weight: 400; }
 .td-time { cursor: pointer; }
-.time-edit { background: #0e1622; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px; font-family: Consolas, monospace; font-size: 14px; padding: 3px 6px; color-scheme: dark; }
+.time-edit-box { display: flex; gap: 4px; align-items: center; }
+.time-edit { background: #0e1622; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px; font-family: Consolas, monospace; font-size: 13.5px; padding: 2px 4px; color-scheme: dark; }
 .op-btns { display: flex; gap: 6px; }
 .empty { color: var(--txt-dim); text-align: center; padding: 26px 0; font-size: 13.5px; }
 
