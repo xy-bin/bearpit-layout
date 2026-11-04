@@ -1569,6 +1569,13 @@ function setupEvents() {
 }
 
 /* ============ 导出布局 CSV（字段与模板一致） ============ */
+/* 文件名时间戳：年月日时分 YYYYMMDDHHmm */
+function timeStamp(d) {
+  const t = d || new Date();
+  const p = n => String(n).padStart(2, '0');
+  return '' + t.getFullYear() + p(t.getMonth() + 1) + p(t.getDate()) + p(t.getHours()) + p(t.getMinutes());
+}
+
 function downloadFile(name, text, mime) {
   const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
@@ -1646,7 +1653,7 @@ function exportCSV() {
   });
 
   if (!rows.length) { alert('当前布局为空，无法导出'); return; }
-  downloadFile('熊坑布局_' + cx + '_' + cy + '.csv', Core.formatLayoutCSV(rows), 'text/csv;charset=utf-8');
+  downloadFile('熊坑布局_' + cx + '_' + cy + '_' + timeStamp() + '.csv', Core.formatLayoutCSV(rows), 'text/csv;charset=utf-8');
   if (unplaced) {
     alert('已导出 ' + rows.length + ' 行（' + placed.length + ' 城镇 + ' + flags.length + ' 旗子）。\n另有 ' +
       unplaced + ' 个城镇未排位、没有坐标，未写入 CSV。');
@@ -1832,7 +1839,7 @@ function exportPNG() {
   }
 
   const a = document.createElement('a');
-  a.download = '熊坑布局_' + state.center.x + '_' + state.center.y + '.png';
+  a.download = '熊坑布局_' + state.center.x + '_' + state.center.y + '_' + timeStamp() + '.png';
   a.href = c.toDataURL('image/png');
   a.click();
 }
