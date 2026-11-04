@@ -1493,6 +1493,9 @@ function setupEvents() {
     renderAll();
   });
 
+  /* --- 更新最新数据：拉取线上最新内置名单，覆盖当前布局（可撤销） --- */
+  $('#btnRefreshData').addEventListener('click', refreshDefaultData);
+
   /* --- 导入弹窗 --- */
   const modal = $('#modal');
   $('#btnImport').addEventListener('click', () => {
@@ -1820,10 +1823,67 @@ function exportPNG() {
   a.click();
 }
 
+/* ============ 内置最新数据 ============ */
+function defaultMeta() {
+  const m = window.BEAR_DEFAULT_META || {};
+  return { center: m.center || '628,523', updated: m.updated || '', towns: m.towns || 0 };
+}
+
+/* 拉取线上最新 default-data.js（绕过缓存）；失败返回 null */
+async function fetchLatestDefault() {
+  try {
+    const res = await fetch('default-data.js?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    const txt = await res.text();
+    const m = txt.match(/BEAR_DEFAULT_CSV\s*=\s*("(?:[^"\\]|\\.)*")/);
+    if (!m) return null;
+    const layout = Core.parseLayoutCSV(JSON.parse(m[1]));
+    return layout && layout.members.length ? layout : null;
+  } catch (e) { return null; }
+}
+
+/* 「更新最新数据」：用最新内置名单覆盖当前布局，可撤销 */
+async function refreshDefaultData() {
+  const btn = $('#btnRefreshData');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
+
+  let layout = await fetchLatestDefault();
+  const fromNet = !!layout;
+  if (!layout && window.BEAR_DEFAULT_CSV) {
+    layout = Core.parseLayoutCSV(window.BEAR_DEFAULT_CSV);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+  if (!layout || !layout.members.length) { alert('没有可用的内置名单数据，请检查网络后重试'); return; }
+
+  const meta = defaultMeta();
+  const towns = layout.members.length;
+  const flags = layout.flags.length;
+  const mines = (layout.mines || []).length;
+
+  const msg = '将用最新内置名单覆盖当前布局：\n' +
+    '· 城镇 ' + towns + ' 座 · 旗子 ' + flags + ' 面 · 联盟矿 ' + mines + ' 处' +
+    (meta.updated ? '\n· 数据更新于 ' + meta.updated : '') +
+    (fromNet ? '' : '\n（网络不可用，已使用页面内置数据）') +
+    '\n\n当前布局（' + state.members.length + ' 座城镇）将被替换，可用「撤销」恢复。确定继续？';
+  if (!confirm(msg)) return;
+
+  applyLayout(layout, meta.center, '', { silent: true });
+  alert('已更新为最新数据：城镇 ' + towns + ' 座 / 旗子 ' + flags + ' 面 / 联盟矿 ' + mines + ' 处（可撤销）');
+}
+
+function renderDataVersion() {
+  const el = $('#dataVer');
+  if (!el) return;
+  const meta = defaultMeta();
+  el.textContent = meta.updated ? ' ｜ 内置名单更新于 ' + meta.updated : '';
+}
+
 /* ============ 启动 ============ */
 function boot() {
   setupEvents();
   renderLegend();
+  renderDataVersion();
 
   const saved = loadSaved();
   if (saved) {
@@ -1838,12 +1898,12 @@ function boot() {
     renderStats();
     draw();
   } else {
-    // 首次打开（无存档）→ 加载内置默认布局（用户导入的 熊坑布局_628_523.csv）
+    // 首次打开（无存档）→ 加载内置默认布局
     let loaded = false;
     if (window.BEAR_DEFAULT_CSV) {
       const layout = Core.parseLayoutCSV(window.BEAR_DEFAULT_CSV);
       if (layout && (layout.members.length || layout.flags.length || (layout.mines || []).length)) {
-        applyLayout(layout, '628,523', '', { silent: true });
+        applyLayout(layout, defaultMeta().center, '', { silent: true });
         loaded = true;
       }
     }
