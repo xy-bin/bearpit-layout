@@ -1814,6 +1814,8 @@ function exportPNG() {
   for (const [name, cc] of Object.entries(CATS)) {
     items.push({ label: name + '(2×2)', color: cc.stroke, bg: cc.fill });
   }
+  ctx.textAlign = 'left';          // 前面成员名用 center，这里必须复位，否则图例文字错位
+  ctx.textBaseline = 'middle';
   for (const it of items) {
     ctx.save();
     ctx.translate(lx + 6, legendY - 4);
@@ -1826,7 +1828,6 @@ function exportPNG() {
     ctx.restore();
     ctx.fillStyle = '#8fa3b0';
     ctx.font = '12px ' + FONT;
-    ctx.textBaseline = 'middle';
     ctx.fillText(it.label, lx + 18, legendY);
     lx += 18 + ctx.measureText(it.label).width + 20;
   }
