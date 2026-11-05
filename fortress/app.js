@@ -870,6 +870,7 @@ renderAll();
 
 /* 云端优先：拉到 KV 数据则覆盖显示，并启动观察者轮询 */
 setupCloudUI();
+if (window.bindPublishButton) bindPublishButton(kvSync, $('#btnPublish'), $('#btnCloud'));
 if (kvSync) {
   kvSync.boot();
   kvSync.startPolling();

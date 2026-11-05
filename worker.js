@@ -61,6 +61,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) return handleApi(request, env);
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+    /* 若请求经过 Worker，强制 HTML/JS/CSS 每次回源校验，避免部署后仍拿到旧版 */
+    if (res.body && res.status !== 304 && /\.(html?|js|css)$/i.test(url.pathname)) {
+      const out = new Response(res.body, res);
+      out.headers.set('cache-control', 'no-cache, must-revalidate');
+      return out;
+    }
+    return res;
   }
 };

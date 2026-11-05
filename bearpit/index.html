@@ -25,6 +25,7 @@
       <button class="btn ghost" id="btnExportRoster" title="按「熊坑布局_中心.csv」模板导出（含占地格、圈层、距离）">导出CSV</button>
       <button class="btn primary" id="btnExport" data-page-node-id="OdTBdWRUwzrLrqz1Dlm6sY">导出图片</button>
       <span class="cloud-status" id="cloudStatus"></span>
+      <button class="btn ghost" id="btnPublish" title="把当前布局立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
       <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
     </div>
   </header>
@@ -91,7 +92,7 @@
         </label>
         <span class="tool-sep"></span>
         <button class="btn danger" id="btnClearTowns" title="清空全部城镇（炉子）；熊坑、联盟旗子、禁用格保留，可撤销">清空城镇（炉子）</button>
-        <button class="btn teal" id="btnRefreshData" title="从线上拉取最新内置名单并覆盖当前布局（可撤销）">更新最新数据</button>
+        <button class="btn teal" id="btnRefreshData" title="优先拉取云端实时数据覆盖当前布局；云端不可用时用内置名单（可撤销）">更新最新数据</button>
       </div>
       <div class="canvas-wrap" id="canvasWrap" data-page-node-id="YB28lV1rKuS0fd8oI6CpxK">
         <canvas id="map" data-page-node-id="wZ2qzIqjRFVeyHesWqpXuW"></canvas>
@@ -223,8 +224,8 @@
 </div>
 
 <link rel="stylesheet" href="../shared/cloud.css" />
-<script src="../shared/kv-store.js"></script>
-<script src="core.js"></script><script src="default-data.js"></script>
-<script src="app.js"></script>
+<script src="../shared/kv-store.js?v=20261106b"></script>
+<script src="core.js?v=20261106b"></script><script src="default-data.js?v=20261106b"></script>
+<script src="app.js?v=20261106b"></script>
 </body>
 </html>

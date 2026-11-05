@@ -2222,6 +2222,7 @@ function boot() {
 
   /* 云端优先：拉到 KV 数据则覆盖显示（实时数据以云端为准），并启动观察者轮询 */
   setupCloudUI();
+  if (window.bindPublishButton) bindPublishButton(kvSync, $('#btnPublish'), $('#btnCloud'));
   if (kvSync) {
     kvSync.boot().then(row => { if (row) renderDataVersion(); });
     kvSync.startPolling();
