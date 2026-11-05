@@ -1,0 +1,5 @@
+/* 云端同步状态小字 */
+.cloud-status { font-size: 11.5px; color: #7d93a3; align-self: center; white-space: nowrap; }
+@media (max-width: 720px) {
+  .cloud-status { width: 100%; text-align: left; white-space: normal; }
+}

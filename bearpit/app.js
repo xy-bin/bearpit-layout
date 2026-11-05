@@ -253,7 +253,72 @@ function persistNow() {
 let saveTimer = null;
 function scheduleSave() {
   if (saveTimer) return;
-  saveTimer = setTimeout(() => { saveTimer = null; persistNow(); }, 250);
+  saveTimer = setTimeout(() => { saveTimer = null; persistNow(); if (window.cloudSync) cloudSync.push(); }, 250);
+}
+
+/* ============ 云端实时同步（公开读 + 口令写） ============ */
+const cloudSync = window.makeCloudSync ? window.makeCloudSync({
+  key: 'bearpit',
+  debounceMs: 1200,
+  pollMs: 30000,
+  collect: () => ({
+    v: 1,
+    ts: Date.now(),
+    data: JSON.parse(snapshot()),
+    showCoords: state.showCoords,
+    watermark: state.watermark
+  }),
+  apply: (payload) => {
+    try {
+      if (!payload || !payload.data || !Array.isArray(payload.data.members)) return;
+      restore(JSON.stringify(payload.data));
+      if (typeof payload.showCoords === 'boolean') {
+        state.showCoords = payload.showCoords;
+        $('#chkCoords').checked = payload.showCoords;
+      }
+      if (typeof payload.watermark === 'string') {
+        state.watermark = payload.watermark;
+        const wm = $('#inWatermark');
+        if (wm) wm.value = payload.watermark;
+      }
+      undoStack.length = 0;
+      redoStack.length = 0;
+      renderStats();
+      draw();
+    } catch (e) { /* 云端数据损坏时忽略，保留当前画面 */ }
+  },
+  onStatus: (t) => { const el = $('#cloudStatus'); if (el) el.textContent = t ? '☁ ' + t : ''; },
+  onLockExpired: () => { const b = $('#btnCloud'); if (b) b.textContent = '🔒 管理员'; }
+}) : null;
+window.cloudSync = cloudSync;
+
+function setupCloudUI() {
+  const btn = $('#btnCloud');
+  if (!btn || !cloudSync) { if (btn) btn.hidden = true; return; }
+  btn.addEventListener('click', async () => {
+    if (cloudSync.isUnlocked()) {
+      if (confirm('已解锁云端同步。要退出管理模式吗？（本机修改仍会保存，但不再上传云端）')) {
+        window.CloudStore.setPass('');
+        btn.textContent = '🔒 管理员';
+        $('#cloudStatus').textContent = '';
+        renderDataVersion();
+      }
+      return;
+    }
+    const p = prompt('输入管理口令（修改将实时同步云端）');
+    if (!p) return;
+    btn.disabled = true;
+    try {
+      const ok = await cloudSync.unlock(p);
+      if (ok) {
+        btn.textContent = '🔓 已解锁';
+        cloudSync.push(); /* 立即把当前内容推上云端 */
+      } else alert('口令不正确');
+    } catch (e) {
+      alert(String(e.message || e));
+    }
+    btn.disabled = false;
+  });
 }
 
 function loadSaved() {
@@ -2128,6 +2193,13 @@ function boot() {
     undoStack.length = 0;
     redoStack.length = 0;
     renderStats();
+  }
+
+  /* 云端优先：拉到云端数据则覆盖显示（实时数据以云端为准），并启动观察者轮询 */
+  setupCloudUI();
+  if (cloudSync) {
+    cloudSync.boot().then(row => { if (row) renderDataVersion(); });
+    cloudSync.startPolling();
   }
 }
 
