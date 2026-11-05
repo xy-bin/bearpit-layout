@@ -3,6 +3,9 @@
   "name": "bearpit-layout",
   "compatibility_date": "2026-01-01",
   "main": "worker.js",
+  "kv_namespaces": [
+    { "binding": "KV_DATA", "id": "0ceb0110e8bc4f2ab16590cdd3193643" }
+  ],
   "assets": {
     "directory": "./",
     "binding": "ASSETS",
