@@ -1,0 +1,14 @@
+/* 云端状态条 + 管理按钮辅助样式（Cloudflare KV 版） */
+.cloud-status {
+  display: inline-block;
+  font-size: 12px;
+  color: #5b7a9d;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) {
+  .cloud-status { max-width: 100%; width: 100%; text-align: center; }
+}

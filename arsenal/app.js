@@ -71,6 +71,63 @@ function persist() {
       stages: stages.map(s => ({ name: s.name, rows: s.rows.map(r => ({ building: r.building, leader: r.leader, body: r.body, note: r.note })) }))
     }));
   } catch (e) { /* 存储不可用时忽略 */ }
+  if (window.kvSync) kvSync.push();
+}
+
+/* ============ 云端实时同步（Cloudflare KV，公开读 + 口令写） ============ */
+const kvSync = window.makeKVSync ? window.makeKVSync({
+  key: 'arsenal',
+  debounceMs: 1200,
+  pollMs: 30000,
+  collect: () => ({
+    v: 1, title, notice: noticeLines, red: redLines, expFoot, nextId,
+    stages: stages.map(s => ({ name: s.name, rows: s.rows.map(r => ({ building: r.building, leader: r.leader, body: r.body, note: r.note })) }))
+  }),
+  apply: (o) => {
+    try {
+      if (!o || !Array.isArray(o.stages)) return;
+      title = typeof o.title === 'string' ? o.title : title;
+      if (Array.isArray(o.notice)) noticeLines = o.notice.map(String);
+      if (Array.isArray(o.red)) redLines = o.red.map(String);
+      if (typeof o.expFoot === 'string') expFoot = o.expFoot;
+      nextId = o.nextId || 1;
+      stages = normStages(o.stages);
+      $('#inTitle').value = title;
+      $('#inNotice').value = noticeLines.join('\n');
+      $('#inRed').value = redLines.join('\n');
+      $('#inFoot').value = expFoot;
+      renderAll();
+    } catch (e) { /* 云端数据损坏时忽略 */ }
+  },
+  onStatus: (t) => { const el = $('#cloudStatus'); if (el) el.textContent = t ? '☁ ' + t : ''; },
+  onLockExpired: () => { const b = $('#btnCloud'); if (b) b.textContent = '🔒 管理员'; }
+}) : null;
+window.kvSync = kvSync;
+
+function setupCloudUI() {
+  const btn = $('#btnCloud');
+  if (!btn || !kvSync) { if (btn) btn.hidden = true; return; }
+  btn.addEventListener('click', async () => {
+    if (kvSync.isUnlocked()) {
+      if (confirm('已解锁云端同步。要退出管理模式吗？')) {
+        window.KVStore.setPass('');
+        btn.textContent = '🔒 管理员';
+        $('#cloudStatus').textContent = '';
+      }
+      return;
+    }
+    const p = prompt('输入管理口令（修改将实时同步云端）');
+    if (!p) return;
+    btn.disabled = true;
+    try {
+      const ok = await kvSync.unlock(p);
+      if (ok) {
+        btn.textContent = '🔓 已解锁';
+        kvSync.push();
+      } else alert('口令不正确');
+    } catch (e) { alert(String(e.message || e)); }
+    btn.disabled = false;
+  });
 }
 
 function load() {
@@ -608,3 +665,10 @@ $('#btnUndoRefresh').addEventListener('click', undoRefreshDefault);
 load();
 if (!stages.length) stages = normStages(INIT.stages);
 renderAll();
+
+/* 云端优先：拉到 KV 数据则覆盖显示，并启动观察者轮询 */
+setupCloudUI();
+if (kvSync) {
+  kvSync.boot();
+  kvSync.startPolling();
+}

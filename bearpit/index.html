@@ -24,6 +24,8 @@
       <button class="btn ghost" id="btnImport" data-page-node-id="CMHOwx2KxXFo8dx0h4BqT7">粘贴名单</button>
       <button class="btn ghost" id="btnExportRoster" title="按「熊坑布局_中心.csv」模板导出（含占地格、圈层、距离）">导出CSV</button>
       <button class="btn primary" id="btnExport" data-page-node-id="OdTBdWRUwzrLrqz1Dlm6sY">导出图片</button>
+      <span class="cloud-status" id="cloudStatus"></span>
+      <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
     </div>
   </header>
 
@@ -220,6 +222,8 @@
   </div>
 </div>
 
+<link rel="stylesheet" href="../shared/cloud.css" />
+<script src="../shared/kv-store.js"></script>
 <script src="core.js"></script><script src="default-data.js"></script>
 <script src="app.js"></script>
 </body>
