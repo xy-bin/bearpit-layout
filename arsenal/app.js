@@ -40,9 +40,12 @@ const SAMPLE = {
   ]
 };
 
-let title = SAMPLE.title;
-let noticeLines = SAMPLE.notice.slice();
-let redLines = SAMPLE.red.slice();
+/* 内置名单：优先用 default-data.js（数据源文件，「更新最新数据」按钮拉取），缺失时用上面的兜底 */
+const INIT = window.ARSENAL_DEFAULT || SAMPLE;
+
+let title = INIT.title;
+let noticeLines = (INIT.notice || SAMPLE.notice).slice();
+let redLines = (INIT.red || SAMPLE.red).slice();
 let expFoot = '永誓盟 · 工具站';
 let stages = [];
 let nextId = 1;
@@ -508,7 +511,100 @@ function exportImage(mapImg) {
   a.click();
 }
 
+/* ============ 更新最新数据：拉取线上最新内置名单，覆盖当前内容（可撤销） ============ */
+/* 从 default-data.js 文本中解析 ARSENAL_DEFAULT 对象（按引号与括号配对扫描，失败返回 null） */
+function parseDefaultFromText(txt) {
+  const i = txt.indexOf('ARSENAL_DEFAULT =');
+  if (i < 0) return null;
+  const s = txt.indexOf('{', i);
+  if (s < 0) return null;
+  let depth = 0, inStr = false, esc = false, end = -1;
+  for (let k = s; k < txt.length; k++) {
+    const ch = txt[k];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (!depth) { end = k; break; } }
+  }
+  if (end < 0) return null;
+  try { return JSON.parse(txt.slice(s, end + 1)); } catch (e) { return null; }
+}
+
+async function fetchLatestDefault() {
+  try {
+    const res = await fetch('default-data.js?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    return parseDefaultFromText(await res.text());
+  } catch (e) { return null; }
+}
+
+function applyDefaultData(data) {
+  if (!data || !Array.isArray(data.stages)) return false;
+  title = typeof data.title === 'string' && data.title ? data.title : title;
+  if (Array.isArray(data.notice)) noticeLines = data.notice.map(String);
+  if (Array.isArray(data.red)) redLines = data.red.map(String);
+  nextId = 1;
+  stages = normStages(data.stages);
+  persist();
+  renderAll();
+  return true;
+}
+
+async function refreshDefaultData() {
+  const btn = $('#btnRefreshData');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
+  let data = await fetchLatestDefault();
+  const fromNet = !!data;
+  if (!data && window.ARSENAL_DEFAULT) data = window.ARSENAL_DEFAULT;
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+  if (!data || !Array.isArray(data.stages)) { alert('没有可用的内置名单数据，请检查网络后重试'); return; }
+
+  const rows = data.stages.reduce((n, s) => n + (s.rows ? s.rows.length : 0), 0);
+  const meta = window.ARSENAL_DEFAULT_META || {};
+  const msg = '将用最新内置名单覆盖当前内容：\n' +
+    '· ' + data.stages.length + ' 个阶段 · ' + rows + ' 行安排' +
+    (meta.updated ? '\n· 数据更新于 ' + meta.updated : '') +
+    (fromNet ? '' : '\n（网络不可用，已使用页面内置数据）') +
+    '\n\n当前内容将被替换，可点「撤销更新」恢复。确定继续？';
+  if (!confirm(msg)) return;
+
+  try {
+    const cur = localStorage.getItem(KEY);
+    if (cur) localStorage.setItem(KEY + '.prev', cur);
+  } catch (e) { /* 存储不可用时跳过备份 */ }
+  if (applyDefaultData(data)) {
+    const undo = $('#btnUndoRefresh');
+    if (undo) undo.hidden = false;
+    alert('已更新为最新数据：' + stages.length + ' 个阶段 / ' + rows + ' 行安排（可撤销）');
+  } else {
+    alert('内置名单数据格式不正确，未做修改');
+  }
+}
+
+function undoRefreshDefault() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY + '.prev'); } catch (e) {}
+  if (!raw) { alert('没有可撤销的备份'); return; }
+  try {
+    localStorage.setItem(KEY, raw);
+  } catch (e) { alert('恢复失败，存储不可用'); return; }
+  load();
+  renderAll();
+  const undo = $('#btnUndoRefresh');
+  if (undo) undo.hidden = true;
+  alert('已恢复到更新前的内容');
+}
+
+$('#btnRefreshData').addEventListener('click', refreshDefaultData);
+$('#btnUndoRefresh').addEventListener('click', undoRefreshDefault);
+
 /* ============ 启动 ============ */
 load();
-if (!stages.length) stages = normStages(SAMPLE.stages);
+if (!stages.length) stages = normStages(INIT.stages);
 renderAll();

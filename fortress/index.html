@@ -22,6 +22,8 @@
     <button class="btn ghost" id="btnClearTime" title="清空全部堡垒的开启时间（联盟、人员保留），方便下次调整">🧹 清空时间</button>
     <button class="btn ghost" id="btnSortTime" title="按开启时间从早到晚排序（未填时间的排最后）">⏱ 按时间排序</button>
     <button class="btn ghost" id="btnExportCsv" title="导出 CSV 名单">导出CSV</button>
+    <button class="btn ghost" id="btnRefreshData" title="从线上拉取最新内置名单并覆盖当前内容（可撤销）">🔄 更新最新数据</button>
+    <button class="btn ghost" id="btnUndoRefresh" title="恢复到更新前的内容" hidden>↩ 撤销更新</button>
     <button class="btn primary" id="btnExport">导出图片</button>
   </div>
 </header>
@@ -83,6 +85,7 @@
   <span class="sign"><a href="../index.html" style="color:inherit;text-decoration:none">← 无尽冬日工具站</a></span>
 </footer>
 
+<script src="default-data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

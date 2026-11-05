@@ -18,9 +18,12 @@ const SAMPLE_ROWS = [
 const SAMPLE_ALLIANCES = ['VOE', 'TOT', 'VCR'];
 const SAMPLE_NOTICE = '19点开始发奖励 注意通知换盟领取';
 
-let alliances = SAMPLE_ALLIANCES.slice();
-let rows = SAMPLE_ROWS.map((r, i) => Object.assign({ id: i + 1 }, r));
-let notice = SAMPLE_NOTICE;
+/* 内置名单：优先用 default-data.js（数据源文件，「更新最新数据」按钮拉取），缺失时用上面的兕底 */
+const INIT = window.FORTRESS_DEFAULT || { alliances: SAMPLE_ALLIANCES, rows: SAMPLE_ROWS, notice: SAMPLE_NOTICE };
+
+let alliances = (INIT.alliances || SAMPLE_ALLIANCES).slice();
+let rows = (INIT.rows || SAMPLE_ROWS).map((r, i) => Object.assign({ id: i + 1 }, r));
+let notice = typeof INIT.notice === 'string' ? INIT.notice : SAMPLE_NOTICE;
 /* 导出图片设置：标题 / 水印副标题 / 页脚署名 */
 let expTitle = '堡垒要塞具体时间人员';
 let expSub = '无尽冬日 · 堡垒开启时间表';
@@ -674,6 +677,100 @@ $('#btnExport').addEventListener('click', () => {
   a.href = c.toDataURL('image/png');
   a.click();
 });
+
+/* ============ 更新最新数据：拉取线上最新内置名单，覆盖当前内容（可撤销） ============ */
+/* 从 default-data.js 文本中解析 FORTRESS_DEFAULT 对象（按引号与括号配对扫描，失败返回 null） */
+function parseDefaultFromText(txt) {
+  const i = txt.indexOf('FORTRESS_DEFAULT =');
+  if (i < 0) return null;
+  const s = txt.indexOf('{', i);
+  if (s < 0) return null;
+  let depth = 0, inStr = false, esc = false, end = -1;
+  for (let k = s; k < txt.length; k++) {
+    const ch = txt[k];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (!depth) { end = k; break; } }
+  }
+  if (end < 0) return null;
+  try { return JSON.parse(txt.slice(s, end + 1)); } catch (e) { return null; }
+}
+
+async function fetchLatestDefault() {
+  try {
+    const res = await fetch('default-data.js?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    return parseDefaultFromText(await res.text());
+  } catch (e) { return null; }
+}
+
+function applyDefaultData(data) {
+  if (!data || !Array.isArray(data.rows)) return false;
+  if (Array.isArray(data.alliances) && data.alliances.length) alliances = data.alliances.map(String);
+  if (typeof data.notice === 'string') notice = data.notice;
+  rows = data.rows.map(r => Object.assign({ id: nextId++ },
+    { al: String(r.al || ''), fort: String(r.fort || ''), time: String(r.time || ''), who: String(r.who || '') }));
+  persist();
+  $('#inNotice').value = notice;
+  renderAll();
+  return true;
+}
+
+async function refreshDefaultData() {
+  const btn = $('#btnRefreshData');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
+  let data = await fetchLatestDefault();
+  const fromNet = !!data;
+  if (!data && window.FORTRESS_DEFAULT) data = window.FORTRESS_DEFAULT;
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+  if (!data || !Array.isArray(data.rows)) { alert('没有可用的内置名单数据，请检查网络后重试'); return; }
+
+  const meta = window.FORTRESS_DEFAULT_META || {};
+  const msg = '将用最新内置名单覆盖当前内容：\n' +
+    '· ' + data.rows.length + ' 行堡垒时间安排' +
+    (data.alliances ? '\n· 联盟：' + data.alliances.join(' / ') : '') +
+    (meta.updated ? '\n· 数据更新于 ' + meta.updated : '') +
+    (fromNet ? '' : '\n（网络不可用，已使用页面内置数据）') +
+    '\n\n当前内容将被替换（导出图片设置保留），可点「撤销更新」恢复。确定继续？';
+  if (!confirm(msg)) return;
+
+  try {
+    const cur = localStorage.getItem(KEY);
+    if (cur) localStorage.setItem(KEY + '.prev', cur);
+  } catch (e) { /* 存储不可用时跳过备份 */ }
+  if (applyDefaultData(data)) {
+    const undo = $('#btnUndoRefresh');
+    if (undo) undo.hidden = false;
+    alert('已更新为最新数据：' + rows.length + ' 行安排（可撤销）');
+  } else {
+    alert('内置名单数据格式不正确，未做修改');
+  }
+}
+
+function undoRefreshDefault() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY + '.prev'); } catch (e) {}
+  if (!raw) { alert('没有可撤销的备份'); return; }
+  try {
+    localStorage.setItem(KEY, raw);
+  } catch (e) { alert('恢复失败，存储不可用'); return; }
+  load();
+  $('#inNotice').value = notice;
+  renderAll();
+  const undo = $('#btnUndoRefresh');
+  if (undo) undo.hidden = true;
+  alert('已恢复到更新前的内容');
+}
+
+$('#btnRefreshData').addEventListener('click', refreshDefaultData);
+$('#btnUndoRefresh').addEventListener('click', undoRefreshDefault);
 
 /* ============ 启动 ============ */
 load();

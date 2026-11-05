@@ -5,6 +5,10 @@
 当前收录：
 
 - **熊坑落位图**（`/bearpit/`）—— 等距网格排位工具，详见下方说明
+- **堡垒开启时间**（`/fortress/`）—— 堡垒 / 要塞开启时间表，联盟分配、时间排序、导出图片与 CSV
+- **兵工厂战略配置**（`/arsenal/`）—— 阶段分组安排车头 / 车身，导出公示图片与 CSV
+
+三个工具均支持「🔄 更新最新数据」：从线上拉取各自 `default-data.js` 内置名单覆盖当前内容，可撤销。
 
 ---
 
@@ -59,7 +63,17 @@ bearpit/              熊坑落位图工具
   core.test.js          算法单测（node bearpit/core.test.js）
 ```
 
-访问路径：首页 `/`，熊坑工具 `/bearpit/`。
+访问路径：首页 `/`，熊坑工具 `/bearpit/`，堡垒 `/fortress/`，兵工厂 `/arsenal/`。
+
+## 更新内置名单
+
+各工具的内置名单是独立的数据源文件，改完推上去，用户点页面里的「🔄 更新最新数据」即可拉到最新：
+
+- `bearpit/default-data.js` —— 熊坑布局 CSV（`window.BEAR_DEFAULT_CSV` + META）
+- `fortress/default-data.js` —— 堡垒时间表（`window.FORTRESS_DEFAULT`）
+- `arsenal/default-data.js` —— 兵工厂阶段名单（`window.ARSENAL_DEFAULT`）
+
+页面首次打开无本地存档时也会加载同目录文件；用户点更新后会覆盖自己当前的内容（更新前自动备份，可一键撤销）。
 
 ## 部署到 Cloudflare Pages
 
