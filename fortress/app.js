@@ -157,6 +157,8 @@ function renderTable() {
     tdDrag.title = '拖动排序';
 
     const tdAl = document.createElement('td');
+    tdAl.className = 'td-al';
+    tdAl.title = '点击切换联盟';
     if (r.al) {
       const dot = document.createElement('i');
       dot.className = 'al-dot';
@@ -166,9 +168,12 @@ function renderTable() {
       b.textContent = r.al;
       tdAl.append(dot, b);
     } else {
-      tdAl.textContent = '—';
-      tdAl.style.color = 'var(--txt-dim)';
+      const b = document.createElement('span');
+      b.className = 'al-name empty';
+      b.textContent = '—';
+      tdAl.appendChild(b);
     }
+    tdAl.addEventListener('click', () => editAllianceInline(tdAl, r));
 
     const tdFort = document.createElement('td');
     tdFort.className = 'fort-name';
@@ -253,6 +258,37 @@ function renderAll() {
   renderAllianceUI();
   renderTable();
   renderStats();
+}
+
+/* 行内切换联盟：点击联盟单元格 → 原地下拉 → 选完即保存 */
+function editAllianceInline(td, row) {
+  if (td.querySelector('select')) return;
+  const sel = document.createElement('select');
+  sel.className = 'al-edit';
+  const opNone = document.createElement('option');
+  opNone.value = ''; opNone.textContent = '— 无 —';
+  sel.appendChild(opNone);
+  alliances.forEach(name => {
+    const op = document.createElement('option');
+    op.value = name; op.textContent = name;
+    sel.appendChild(op);
+  });
+  sel.value = row.al || '';
+  td.textContent = '';
+  td.appendChild(sel);
+  sel.focus();
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    row.al = sel.value;
+    persist();
+    renderTable();
+    renderStats();
+  };
+  sel.addEventListener('change', commit);
+  sel.addEventListener('blur', () => setTimeout(() => { if (!td.contains(document.activeElement)) renderTable(); }, 120));
+  sel.addEventListener('keydown', e => { if (e.key === 'Escape') renderTable(); });
 }
 
 /* 行内修改集结人员：点击人员单元格 → 原地输入框 → 回车/失焦保存，Esc 取消 */
