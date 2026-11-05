@@ -123,3 +123,35 @@ a { color: var(--teal); }
   margin-top: auto; padding: 20px 0 26px; text-align: center;
   color: var(--txt-dim); font-size: 12.5px; border-top: 1px solid var(--line);
 }
+
+/* ============ 移动端自适应 ============ */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; padding: 12px 0 4px; gap: 10px; }
+  .brand { flex: 1; min-width: 0; }
+  .logo { width: 40px; height: 40px; border-radius: 11px; font-size: 19px; }
+  .brand-text h1 { font-size: 17px; }
+  .actions { width: 100%; gap: 7px; }
+  .actions .btn { flex: 1 1 44%; min-width: 0; padding: 8px 10px; font-size: 12.5px; }
+
+  .page { width: min(1080px, calc(100vw - 16px)); gap: 12px; }
+  .card { padding: 14px 14px 16px; }
+  .card-title h3 { font-size: 14px; }
+
+  .add-row { gap: 10px; }
+  .add-row .field { width: calc(50% - 5px); }
+  .add-row .field.grow { width: 100%; flex: 1 1 100%; }
+  .add-row textarea { font-size: 15px; }
+  .add-row .btn { width: 100%; height: 42px; font-size: 14px; }
+
+  .stage-card { padding: 12px 10px; overflow-x: auto; }
+  .stage-name { width: 150px; font-size: 15px; }
+  .stage-tools { gap: 5px; }
+  .stage-tools .btn { padding: 6px 9px; font-size: 12px; }
+  .atable { min-width: 640px; font-size: 12.5px; }
+  .atable th { font-size: 11px; padding: 6px; }
+  .atable td { padding: 7px 6px; }
+  .w-op { width: 104px; }
+  .op-btns .btn { padding: 5px 8px; font-size: 12px; }
+
+  .footer { flex-direction: column; gap: 4px; }
+}

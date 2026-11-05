@@ -43,6 +43,7 @@ const SAMPLE = {
 let title = SAMPLE.title;
 let noticeLines = SAMPLE.notice.slice();
 let redLines = SAMPLE.red.slice();
+let expFoot = '永誓盟 · 工具站';
 let stages = [];
 let nextId = 1;
 
@@ -63,7 +64,7 @@ function normStages(list) {
 function persist() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      v: 1, title, notice: noticeLines, red: redLines, nextId,
+      v: 1, title, notice: noticeLines, red: redLines, expFoot, nextId,
       stages: stages.map(s => ({ name: s.name, rows: s.rows.map(r => ({ building: r.building, leader: r.leader, body: r.body, note: r.note })) }))
     }));
   } catch (e) { /* 存储不可用时忽略 */ }
@@ -78,6 +79,7 @@ function load() {
     title = typeof o.title === 'string' ? o.title : title;
     if (Array.isArray(o.notice)) noticeLines = o.notice.map(String);
     if (Array.isArray(o.red)) redLines = o.red.map(String);
+    if (typeof o.expFoot === 'string') expFoot = o.expFoot;
     nextId = o.nextId || 1;
     stages = normStages(o.stages);
   } catch (e) { /* 损坏存档按默认处理 */ }
@@ -259,6 +261,7 @@ function renderAll() {
   $('#inTitle').value = title;
   $('#inNotice').value = noticeLines.join('\n');
   $('#inRed').value = redLines.join('\n');
+  $('#inFoot').value = expFoot;
   renderStages();
   renderStats();
 }
@@ -276,6 +279,7 @@ function moveStage(si, dir) {
 $('#inTitle').addEventListener('input', e => { title = e.target.value.trim(); persist(); });
 $('#inNotice').addEventListener('input', e => { noticeLines = e.target.value.split('\n').map(s => s.trim()).filter(Boolean); persist(); });
 $('#inRed').addEventListener('input', e => { redLines = e.target.value.split('\n').map(s => s.trim()).filter(Boolean); persist(); });
+$('#inFoot').addEventListener('input', e => { expFoot = e.target.value.trim(); persist(); });
 
 $('#btnAddStage').addEventListener('click', () => {
   stages.push({ id: nextId++, name: '第' + (stages.length + 1) + '阶段', rows: [] });
@@ -482,10 +486,12 @@ function exportImage(mapImg) {
   }
 
   /* 页脚 */
-  ctx.fillStyle = '#9aa7b0';
-  ctx.font = '400 12px ' + FONT;
-  ctx.textAlign = 'right';
-  ctx.fillText('永誓盟 · 工具站', W - pad, H - 12);
+  if (expFoot) {
+    ctx.fillStyle = '#9aa7b0';
+    ctx.font = '400 12px ' + FONT;
+    ctx.textAlign = 'right';
+    ctx.fillText(expFoot, W - pad, H - 12);
+  }
 
   const a = document.createElement('a');
   a.download = '兵工厂战略配置_' + timeStamp() + '.png';

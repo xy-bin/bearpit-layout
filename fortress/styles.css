@@ -163,3 +163,4 @@ a { color: var(--teal); }
 
   .footer { flex-direction: column; gap: 4px; }
 }
+  .card-title { flex-wrap: wrap; }
