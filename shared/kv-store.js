@@ -157,6 +157,17 @@ window.makeKVSync = function (cfg) {
   };
 };
 
+/* 通用启动：同步按钮初始状态 → 拉云端 → 云端为空且已解锁时把本地数据初始化上去 → 开启轮询 */
+window.initCloudSync = function (sync, cloudBtn, onBoot) {
+  if (!sync) return;
+  if (cloudBtn && sync.isUnlocked()) cloudBtn.textContent = '🔓 已解锁';
+  sync.boot().then(function (row) {
+    if (onBoot) { try { onBoot(row); } catch (e) { /* 忽略 */ } }
+    if (!row && sync.isUnlocked()) return sync.publish().catch(function () { /* 静默 */ });
+  }).catch(function () { /* 静默 */ });
+  sync.startPolling();
+};
+
 /* 通用「☁ 发布」按钮：未解锁时顺带弹口令框，解锁后立即把当前内容写入云端 */
 window.bindPublishButton = function (sync, btn, cloudBtn) {
   if (!sync || !btn) return;
