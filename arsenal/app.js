@@ -212,7 +212,7 @@ function renderStages() {
       const tbl = document.createElement('table');
       tbl.className = 'atable';
       tbl.appendChild(Object.assign(document.createElement('thead'), { innerHTML:
-        '<tr><th style="width:19%">兵工厂安排</th><th style="width:13%">车头</th><th style="width:36%">车身（非固定，可以各自交换位置）</th><th style="width:26%">注意事项</th><th class="w-op"></th></tr>' }));
+        '<tr><th style="width:18%">兵工厂安排</th><th style="width:12%">车头</th><th style="width:34%">车身（非固定，可以各自交换位置）</th><th style="width:30%">注意事项</th><th class="w-op"></th></tr>' }));
       const tbody = document.createElement('tbody');
       st.rows.forEach((r, ri) => {
         const tr = document.createElement('tr');
@@ -303,18 +303,64 @@ function downloadFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
-/* ============ 导出公示图片（仿飞书表格样式） ============ */
+/* ============ 导出公示图片（仿飞书表格样式 + 兵工厂地图） ============ */
+/* 文本按像素宽度折行 */
+function wrapLines(ctx, text, maxW) {
+  const out = [];
+  let cur = '';
+  for (const ch of String(text)) {
+    if (ch === '\n') { out.push(cur); cur = ''; continue; }
+    if (cur && ctx.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; }
+    else cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
+
 $('#btnExport').addEventListener('click', () => {
+  const mapImg = new Image();
+  mapImg.onload = () => exportImage(mapImg);
+  mapImg.onerror = () => exportImage(null);
+  mapImg.src = 'map.jpg';
+});
+
+function exportImage(mapImg) {
   const W = 1080, pad = 22, gap = 3;
   const tableW0 = W - pad * 2;
-  const cols = [216, 168, 396, tableW0 - 216 - 168 - 396 - gap * 3]; // 建筑 / 车头 / 车身 / 注意事项
+  const cols = [190, 140, 370, tableW0 - 190 - 140 - 370 - gap * 3]; // 建筑 / 车头 / 车身 / 注意事项
   const titleH = 62;
   const nBlack = noticeLines.length, nRed = redLines.length;
   const noticeH = (nBlack + nRed) ? 20 + (nBlack + nRed) * 30 + 14 : 0;
-  const headH = 42, rowH = 46, bandH = 54;
+  const headH = 42, bandH = 54, lineH = 21;
+  const FONT = '"Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+
+  /* 预计算每行高度（按最长折行列） */
+  const meas = document.createElement('canvas').getContext('2d');
+  function cellLines(text, font, w) {
+    meas.font = font;
+    return wrapLines(meas, text, w - 14);
+  }
+  const cellFonts = {
+    building: '700 17px ' + FONT,
+    leader: '800 18px ' + FONT,
+    body: '400 16.5px ' + FONT,
+    note: '700 16px ' + FONT
+  };
+  stages.forEach(st => {
+    st._rowH = st.rows.map(r => {
+      const n = Math.max(1, ...['building', 'leader', 'body', 'note'].map(k => cellLines(r[k] || '', cellFonts[k], cols[['building', 'leader', 'body', 'note'].indexOf(k)]).length));
+      return Math.max(46, n * lineH + 16);
+    });
+  });
+
+  /* 地图高度 */
+  const mapH = mapImg ? Math.round(tableW0 * mapImg.naturalHeight / mapImg.naturalWidth) : 0;
+  const mapBandH = mapImg ? 40 : 0;
+
   let H = pad + titleH + (noticeH ? noticeH + gap : 0);
-  stages.forEach(st => { H += (st.rows.length ? bandH + headH + st.rows.length * rowH : bandH) + gap; });
-  H += pad;
+  stages.forEach(st => { H += (st.rows.length ? bandH + headH + st._rowH.reduce((a, b) => a + b, 0) : bandH) + gap; });
+  if (mapImg) H += gap + mapBandH + gap + mapH;
+  H += pad + 16;
 
   const scale = 2;
   const c = document.createElement('canvas');
@@ -322,14 +368,21 @@ $('#btnExport').addEventListener('click', () => {
   const ctx = c.getContext('2d');
   ctx.scale(scale, scale);
 
-  const FONT = '"Microsoft YaHei","PingFang SC",system-ui,sans-serif';
-  const tableX = pad, tableW = W - pad * 2;
+  function rr2(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
 
-  // 背景
+  const tableX = pad, tableW = W - pad * 2;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // 标题（浅蓝底；括号内文字红色）
+  /* 标题（浅蓝底；括号内文字红色） */
   ctx.fillStyle = '#d4e9f7';
   ctx.fillRect(tableX, pad, tableW, titleH);
   ctx.textBaseline = 'middle';
@@ -346,7 +399,7 @@ $('#btnExport').addEventListener('click', () => {
     ctx.fillText(t2, tx + w1, pad + titleH / 2);
   }
 
-  // 公告（浅黄底：黑粗体行 + 红粗体行）
+  /* 公告（浅黄底：黑粗体行 + 红粗体行） */
   let y = pad + titleH;
   if (noticeH) {
     ctx.fillStyle = '#fdf6d0';
@@ -368,10 +421,11 @@ $('#btnExport').addEventListener('click', () => {
     y += noticeH + gap;
   }
 
-  // 各阶段
-  const cellBg = { b: '#ddeff8', l: '#f9c9cd', body: '#f7e27a', n: '#ddeff8' };
+  /* 各阶段 */
+  const cellBg = { building: '#ddeff8', leader: '#f9c9cd', body: '#f7e27a', note: '#ddeff8' };
+  const cellColor = { building: '#16324a', leader: '#1a1a1a', body: '#1a1a1a', note: '#d33030' };
+  const keys = ['building', 'leader', 'body', 'note'];
   stages.forEach(st => {
-    // 阶段横幅
     ctx.fillStyle = '#dcecfb';
     ctx.fillRect(tableX, y, tableW, bandH);
     ctx.textAlign = 'center';
@@ -381,7 +435,6 @@ $('#btnExport').addEventListener('click', () => {
     y += bandH;
     if (!st.rows.length) { y += gap; return; }
 
-    // 表头（蓝底深字）
     ctx.fillStyle = '#7cc4ea';
     ctx.fillRect(tableX, y, tableW, headH);
     ctx.fillStyle = '#0d3a5c';
@@ -394,32 +447,41 @@ $('#btnExport').addEventListener('click', () => {
     });
     y += headH;
 
-    // 数据行
-    st.rows.forEach(r => {
+    st.rows.forEach((r, ri) => {
+      const rh = st._rowH[ri];
       let cx = tableX;
-      const cells = [
-        { key: 'building', w: cols[0], bg: cellBg.b, color: '#16324a', font: '700 17px ' + FONT },
-        { key: 'leader', w: cols[1], bg: cellBg.l, color: '#1a1a1a', font: '800 18px ' + FONT },
-        { key: 'body', w: cols[2], bg: cellBg.body, color: '#1a1a1a', font: '400 16.5px ' + FONT },
-        { key: 'note', w: cols[3], bg: cellBg.n, color: '#d33030', font: '700 16px ' + FONT }
-      ];
-      cells.forEach(cell => {
-        ctx.fillStyle = cell.bg;
-        ctx.fillRect(cx, y, cell.w, rowH);
-        if (r[cell.key]) {
-          ctx.fillStyle = cell.color;
-          ctx.font = cell.font;
+      keys.forEach((k, i) => {
+        ctx.fillStyle = cellBg[k];
+        ctx.fillRect(cx, y, cols[i], rh);
+        if (r[k]) {
+          const lines = cellLines(r[k], cellFonts[k], cols[i]);
+          ctx.fillStyle = cellColor[k];
+          ctx.font = cellFonts[k];
           ctx.textAlign = 'center';
-          ctx.fillText(r[cell.key], cx + cell.w / 2, y + rowH / 2, cell.w - 12);
+          const startY = y + (rh - lines.length * lineH) / 2 + lineH / 2;
+          lines.forEach((ln, li) => ctx.fillText(ln, cx + cols[i] / 2, startY + li * lineH, cols[i] - 12));
         }
-        cx += cell.w + gap;
+        cx += cols[i] + gap;
       });
-      y += rowH;
+      y += rh;
     });
     y += gap;
   });
 
-  // 页脚
+  /* 兵工厂地图 */
+  if (mapImg) {
+    ctx.fillStyle = '#d4e9f7';
+    ctx.fillRect(tableX, y, tableW, mapBandH);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#16324a';
+    ctx.font = '800 20px ' + FONT;
+    ctx.fillText('兵工厂资源地图（参考）', W / 2, y + mapBandH / 2);
+    y += mapBandH + gap;
+    ctx.drawImage(mapImg, tableX, y, tableW, mapH);
+    y += mapH;
+  }
+
+  /* 页脚 */
   ctx.fillStyle = '#9aa7b0';
   ctx.font = '400 12px ' + FONT;
   ctx.textAlign = 'right';
@@ -427,9 +489,18 @@ $('#btnExport').addEventListener('click', () => {
 
   const a = document.createElement('a');
   a.download = '兵工厂战略配置_' + timeStamp() + '.png';
-  a.href = c.toDataURL('image/png');
+  let data;
+  try {
+    data = c.toDataURL('image/png');
+  } catch (err) {
+    /* 本地 file:// 打开时地图会污染画布，降级为不带地图导出 */
+    alert('本地打开时无法把地图写入导出图片（浏览器安全限制），本次导出不含地图；线上网站使用可正常附带地图。');
+    exportImage(null);
+    return;
+  }
+  a.href = data;
   a.click();
-});
+}
 
 /* ============ 启动 ============ */
 load();
