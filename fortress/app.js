@@ -783,6 +783,37 @@ async function refreshDefaultData() {
   const btn = $('#btnRefreshData');
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
+
+  /* 云端优先：KV 实时数据比内置名单更新，直接采用 */
+  if (window.KVStore && KVStore.ok()) {
+    try {
+      const row = await KVStore.load('fortress');
+      const p = row && row.payload;
+      if (p && Array.isArray(p.rows)) {
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+        if (!confirm('将用云端实时数据覆盖当前内容（更新于 ' + (row.updated_at || '未知时间') + '）：\n' +
+          '· ' + p.rows.length + ' 行堡垒时间安排' +
+          (p.alliances ? '\n· 联盟：' + p.alliances.join(' / ') : '') +
+          '\n\n当前内容将被替换（导出图片设置保留），可点「撤销更新」恢复。确定继续？')) return;
+        try {
+          const cur = localStorage.getItem(KEY);
+          if (cur) localStorage.setItem(KEY + '.prev', cur);
+        } catch (e) { /* 存储不可用时跳过备份 */ }
+        alliances = Array.isArray(p.alliances) && p.alliances.length ? p.alliances : alliances;
+        rows = p.rows;
+        notice = typeof p.notice === 'string' ? p.notice : notice;
+        nextId = p.nextId || rows.length + 1;
+        $('#inNotice').value = notice;
+        renderAll();
+        persist();
+        const undo = $('#btnUndoRefresh');
+        if (undo) undo.hidden = false;
+        alert('已更新为云端最新数据：' + rows.length + ' 行安排（' + (row.updated_at || '') + '）（可撤销）');
+        return;
+      }
+    } catch (e) { /* 云端不可用 → 走内置名单兜底 */ }
+  }
+
   let data = await fetchLatestDefault();
   const fromNet = !!data;
   if (!data && window.FORTRESS_DEFAULT) data = window.FORTRESS_DEFAULT;

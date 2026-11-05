@@ -2125,6 +2125,31 @@ async function refreshDefaultData() {
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
 
+  /* 云端优先：KV 实时数据比内置名单更新，直接采用 */
+  if (window.KVStore && KVStore.ok()) {
+    try {
+      const row = await KVStore.load('bearpit');
+      const p = row && row.payload;
+      if (p && p.data && Array.isArray(p.data.members)) {
+        const d = JSON.stringify(p.data);
+        const tmp = JSON.parse(d);
+        const towns = tmp.members.length, flags = (tmp.flags || []).length, mines = (tmp.mines || []).length;
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+        if (!confirm('将用云端实时数据覆盖当前布局（更新于 ' + (row.updated_at || '未知时间') + '）：\n' +
+          '· 城镇 ' + towns + ' 座 · 旗子 ' + flags + ' 面 · 联盟矿 ' + mines + ' 处' +
+          '\n\n可用「撤销」恢复。确定继续？')) return;
+        undoStack.push(snapshot());
+        restore(d);
+        if (typeof p.showCoords === 'boolean') { state.showCoords = p.showCoords; $('#chkCoords').checked = p.showCoords; }
+        if (typeof p.watermark === 'string') { state.watermark = p.watermark; const wm = $('#inWatermark'); if (wm) wm.value = p.watermark; }
+        redoStack.length = 0;
+        persistNow();
+        alert('已更新为云端最新数据（' + (row.updated_at || '') + '）');
+        return;
+      }
+    } catch (e) { /* 云端不可用 → 走内置名单兜底 */ }
+  }
+
   let layout = await fetchLatestDefault();
   const fromNet = !!layout;
   if (!layout && window.BEAR_DEFAULT_CSV) {

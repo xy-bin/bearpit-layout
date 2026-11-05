@@ -616,6 +616,40 @@ async function refreshDefaultData() {
   const btn = $('#btnRefreshData');
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '获取中…'; }
+
+  /* 云端优先：KV 实时数据比内置名单更新，直接采用 */
+  if (window.KVStore && KVStore.ok()) {
+    try {
+      const row = await KVStore.load('arsenal');
+      const p = row && row.payload;
+      if (p && Array.isArray(p.stages)) {
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+        const nrows = p.stages.reduce((n, s) => n + (s.rows ? s.rows.length : 0), 0);
+        if (!confirm('将用云端实时数据覆盖当前内容（更新于 ' + (row.updated_at || '未知时间') + '）：\n' +
+          '· ' + p.stages.length + ' 个阶段 · ' + nrows + ' 行安排' +
+          '\n\n当前内容将被替换，可点「撤销更新」恢复。确定继续？')) return;
+        try {
+          const cur = localStorage.getItem(KEY);
+          if (cur) localStorage.setItem(KEY + '.prev', cur);
+        } catch (e) { /* 存储不可用时跳过备份 */ }
+        title = typeof p.title === 'string' ? p.title : title;
+        if (Array.isArray(p.notice)) noticeLines = p.notice.map(String);
+        if (Array.isArray(p.red)) redLines = p.red.map(String);
+        nextId = p.nextId || 1;
+        stages = normStages(p.stages);
+        $('#inTitle').value = title;
+        $('#inNotice').value = noticeLines.join('\n');
+        $('#inRed').value = redLines.join('\n');
+        renderAll();
+        persist();
+        const undo = $('#btnUndoRefresh');
+        if (undo) undo.hidden = false;
+        alert('已更新为云端最新数据：' + stages.length + ' 个阶段 / ' + nrows + ' 行安排（' + (row.updated_at || '') + '）（可撤销）');
+        return;
+      }
+    } catch (e) { /* 云端不可用 → 走内置名单兜底 */ }
+  }
+
   let data = await fetchLatestDefault();
   const fromNet = !!data;
   if (!data && window.ARSENAL_DEFAULT) data = window.ARSENAL_DEFAULT;
