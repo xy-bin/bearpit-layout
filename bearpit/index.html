@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#050b11" />
 <title>联盟熊坑布局规划</title>
 <link rel="stylesheet" href="styles.css" data-page-node-id="pNnVv6tr6UXMWJUwxeRsjE" />
+<link rel="stylesheet" href="../shared/topbar.css?v=20261106e" />
 </head>
 <body data-page-node-id="QmyOHDufGCvAQMu6fgPbwu">
 <div class="app" data-page-node-id="x5sXZea6l0tTg7CAIK42DZ">
@@ -19,14 +20,22 @@
       </div>
     </div>
     <div class="actions" data-page-node-id="DVL962Cnjlcsx1D1kamCHM">
-      <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
-      <button class="btn ghost" id="btnAuto" title="按距离重新分配座位" data-page-node-id="xXDXAvdTlEMTPAEYiOcbTB">自动紧凑排位</button>
-      <button class="btn ghost" id="btnImport" data-page-node-id="CMHOwx2KxXFo8dx0h4BqT7">粘贴名单</button>
-      <button class="btn ghost" id="btnExportRoster" title="按「熊坑布局_中心.csv」模板导出（含占地格、圈层、距离）">导出CSV</button>
-      <button class="btn primary" id="btnExport" data-page-node-id="OdTBdWRUwzrLrqz1Dlm6sY">导出图片</button>
-      <span class="cloud-status" id="cloudStatus"></span>
-      <button class="btn ghost" id="btnPublish" title="把当前布局立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
-      <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
+      <div class="action-group">
+        <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+      </div>
+      <div class="action-group">
+        <button class="btn ghost" id="btnAuto" title="按距离重新分配座位" data-page-node-id="xXDXAvdTlEMTPAEYiOcbTB">自动紧凑排位</button>
+        <button class="btn ghost" id="btnImport" data-page-node-id="CMHOwx2KxXFo8dx0h4BqT7">粘贴名单</button>
+        <button class="btn ghost" id="btnExportRoster" title="按「熊坑布局_中心.csv」模板导出（含占地格、圈层、距离）">导出CSV</button>
+      </div>
+      <div class="action-group">
+        <button class="btn primary" id="btnExport" data-page-node-id="OdTBdWRUwzrLrqz1Dlm6sY">导出图片</button>
+      </div>
+      <div class="action-group cloud-group">
+        <span class="cloud-status" id="cloudStatus"></span>
+        <button class="btn ghost" id="btnPublish" title="把当前布局立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
+        <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
+      </div>
     </div>
   </header>
 
@@ -224,8 +233,8 @@
 </div>
 
 <link rel="stylesheet" href="../shared/cloud.css" />
-<script src="../shared/kv-store.js?v=20261106d"></script>
-<script src="core.js?v=20261106d"></script><script src="default-data.js?v=20261106d"></script>
-<script src="app.js?v=20261106d"></script>
+<script src="../shared/kv-store.js?v=20261106e"></script>
+<script src="core.js?v=20261106e"></script><script src="default-data.js?v=20261106e"></script>
+<script src="app.js?v=20261106e"></script>
 </body>
 </html>

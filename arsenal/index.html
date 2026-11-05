@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>兵工厂战略配置 · 永誓盟工具站</title>
 <link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="../shared/topbar.css?v=20261106e" />
 </head>
 <body>
 
@@ -17,14 +18,22 @@
     </div>
   </div>
   <div class="actions">
-    <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
-    <button class="btn ghost" id="btnExportCsv" title="导出 CSV 名单">导出CSV</button>
-    <button class="btn ghost" id="btnRefreshData" title="优先拉取云端实时数据覆盖当前内容；云端不可用时用内置配置（可撤销）">🔄 更新最新数据</button>
-    <button class="btn ghost" id="btnUndoRefresh" title="恢复到更新前的内容" hidden>↩ 撤销更新</button>
-    <button class="btn primary" id="btnExport">导出公示图片</button>
-    <span class="cloud-status" id="cloudStatus"></span>
-    <button class="btn ghost" id="btnPublish" title="把当前配置立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
-    <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
+    <div class="action-group">
+      <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+    </div>
+    <div class="action-group">
+      <button class="btn ghost" id="btnExportCsv" title="导出 CSV 名单">导出CSV</button>
+      <button class="btn ghost" id="btnRefreshData" title="优先拉取云端实时数据覆盖当前内容；云端不可用时用内置配置（可撤销）">🔄 更新最新数据</button>
+      <button class="btn ghost" id="btnUndoRefresh" title="恢复到更新前的内容" hidden>↩ 撤销更新</button>
+    </div>
+    <div class="action-group">
+      <button class="btn primary" id="btnExport">导出公示图片</button>
+    </div>
+    <div class="action-group cloud-group">
+      <span class="cloud-status" id="cloudStatus"></span>
+      <button class="btn ghost" id="btnPublish" title="把当前配置立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
+      <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端，所有人刷新即可看到">🔒 管理员</button>
+    </div>
   </div>
 </header>
 
@@ -66,8 +75,8 @@
 </footer>
 
 <link rel="stylesheet" href="../shared/cloud.css" />
-<script src="../shared/kv-store.js?v=20261106d"></script>
-<script src="default-data.js?v=20261106d"></script>
-<script src="app.js?v=20261106d"></script>
+<script src="../shared/kv-store.js?v=20261106e"></script>
+<script src="default-data.js?v=20261106e"></script>
+<script src="app.js?v=20261106e"></script>
 </body>
 </html>

@@ -84,6 +84,21 @@ window.fmtKVTime = function (s, withAgo) {
   return text + '，' + ago;
 };
 
+/* 统一状态徽章：按文案自动着色（成功绿 / 异常红 / 进行中黄），空文案自动隐藏。
+   顶栏只显示「07:04 · 6 分钟前」这类精简版以免撑爆布局，完整时间放 hover 提示（弹窗里仍是完整版）。 */
+window.setCloudStatus = function (t) {
+  var el = document.getElementById('cloudStatus');
+  if (!el) return;
+  el.title = t || '';
+  var short = (t || '').replace(/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2}):\d{2}（北京时间），?/, '$1:$2 · ');
+  el.textContent = short ? '☁ ' + short : '';
+  el.className = 'cloud-status';
+  if (!t) return;
+  if (/失败|错误|失效|不可用|不正确|连接/.test(t)) el.classList.add('err');
+  else if (/发布中|获取中|同步中|解锁|暂无数据|退出/.test(t)) el.classList.add('busy');
+  else el.classList.add('ok');
+};
+
 /* 云端同步器：boot 拉取、push 防抖上传、publish 立即上传、viewer 轮询；由各工具传入 collect/apply 钩子 */
 window.makeKVSync = function (cfg) {
   var timer = null, lastUpdatedAt = null, polling = false, dirty = false;

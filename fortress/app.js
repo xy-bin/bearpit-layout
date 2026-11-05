@@ -62,7 +62,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       renderAll();
     } catch (e) { /* 云端数据损坏时忽略 */ }
   },
-  onStatus: (t) => { const el = $('#cloudStatus'); if (el) el.textContent = t ? '☁ ' + t : ''; },
+  onStatus: (t) => { if (window.setCloudStatus) setCloudStatus(t); },
   onLockExpired: () => { const b = $('#btnCloud'); if (b) b.textContent = '🔒 管理员'; }
 }) : null;
 window.kvSync = kvSync;

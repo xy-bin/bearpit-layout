@@ -287,7 +287,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       draw();
     } catch (e) { /* 云端数据损坏时忽略，保留当前画面 */ }
   },
-  onStatus: (t) => { const el = $('#cloudStatus'); if (el) el.textContent = t ? '☁ ' + t : ''; },
+  onStatus: (t) => { if (window.setCloudStatus) setCloudStatus(t); },
   onLockExpired: () => { const b = $('#btnCloud'); if (b) b.textContent = '🔒 管理员'; }
 }) : null;
 window.kvSync = kvSync;
