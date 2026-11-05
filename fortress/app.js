@@ -34,63 +34,6 @@ function persist() {
   try {
     localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
-  if (window.cloudSync) cloudSync.push();
-}
-
-/* ============ 云端实时同步（公开读 + 口令写） ============ */
-const cloudSync = window.makeCloudSync ? window.makeCloudSync({
-  key: 'fortress',
-  debounceMs: 1200,
-  pollMs: 30000,
-  collect: () => ({ v: 1, alliances, rows, notice, nextId, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
-  apply: (o) => {
-    try {
-      if (!o || !Array.isArray(o.rows)) return;
-      alliances = Array.isArray(o.alliances) && o.alliances.length ? o.alliances : alliances;
-      rows = o.rows;
-      notice = typeof o.notice === 'string' ? o.notice : notice;
-      nextId = o.nextId || rows.length + 1;
-      if (o.exp && typeof o.exp === 'object') {
-        expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
-        expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
-        expFoot = typeof o.exp.foot === 'string' ? o.exp.foot : expFoot;
-      }
-      $('#inNotice').value = notice;
-      $('#expTitle').value = expTitle;
-      $('#expSub').value = expSub;
-      $('#expFoot').value = expFoot;
-      renderAll();
-    } catch (e) { /* 云端数据损坏时忽略 */ }
-  },
-  onStatus: (t) => { const el = $('#cloudStatus'); if (el) el.textContent = t ? '☁ ' + t : ''; },
-  onLockExpired: () => { const b = $('#btnCloud'); if (b) b.textContent = '🔒 管理员'; }
-}) : null;
-window.cloudSync = cloudSync;
-
-function setupCloudUI() {
-  const btn = $('#btnCloud');
-  if (!btn || !cloudSync) { if (btn) btn.hidden = true; return; }
-  btn.addEventListener('click', async () => {
-    if (cloudSync.isUnlocked()) {
-      if (confirm('已解锁云端同步。要退出管理模式吗？')) {
-        window.CloudStore.setPass('');
-        btn.textContent = '🔒 管理员';
-        $('#cloudStatus').textContent = '';
-      }
-      return;
-    }
-    const p = prompt('输入管理口令（修改将实时同步云端）');
-    if (!p) return;
-    btn.disabled = true;
-    try {
-      const ok = await cloudSync.unlock(p);
-      if (ok) {
-        btn.textContent = '🔓 已解锁';
-        cloudSync.push();
-      } else alert('口令不正确');
-    } catch (e) { alert(String(e.message || e)); }
-    btn.disabled = false;
-  });
 }
 
 function load() {
@@ -836,10 +779,3 @@ $('#expTitle').value = expTitle;
 $('#expSub').value = expSub;
 $('#expFoot').value = expFoot;
 renderAll();
-
-/* 云端优先：拉到云端数据则覆盖显示，并启动观察者轮询 */
-setupCloudUI();
-if (cloudSync) {
-  cloudSync.boot();
-  cloudSync.startPolling();
-}
