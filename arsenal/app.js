@@ -18,7 +18,7 @@ const SAMPLE = {
     {
       name: '第一阶段',
       rows: [
-        { building: '蒸汽炉', leader: '晚风', body: '星河，不见初心，米姐，猫猫爱喝可乐', note: '车头副队占领武器维修厂4号' },
+        { building: '蒸汽炉', leader: '晚风', body: '星河，不忘初心，米姐，猫猫爱喝可乐', note: '车头副队占领武器维修厂4号' },
         { building: '中转站', leader: '阿瑟', body: '甜甜圈，朵拉，肠的叹息，陈冠希', note: '' },
         { building: '武器实验厂1号', leader: 'BKrurd', body: 'BKKiss，阴雨天，我忘萌你了，你萌到我了', note: '车头副队占领武器维修厂1号' },
         { building: '武器实验厂2号', leader: '兔子', body: '大黄鸭子，妮蔻，绝对零度，就爱吃熊', note: '车头副队占领武器维修厂2号' },
@@ -31,7 +31,7 @@ const SAMPLE = {
       rows: [
         { building: '皇家兵工厂', leader: 'BKrurd', body: 'BKKiss，阴雨天，我忘萌你了，你萌到我了', note: '车头副队占领武器实验厂1号' },
         { building: '军火库', leader: '兔子', body: '大黄鸭子，妮蔻，绝对零度，就爱吃熊', note: '车头副队占领武器维修厂2号' },
-        { building: '蒸汽炉', leader: '晚风', body: '星河，不见初心，米姐，猫猫爱喝可乐', note: '车头副队占领武器维修厂4号' },
+        { building: '蒸汽炉', leader: '晚风', body: '星河，不忘初心，米姐，猫猫爱喝可乐', note: '车头副队占领武器维修厂4号' },
         { building: '中转站', leader: '阿瑟', body: '甜甜圈，朵拉，肠的叹息，陈冠希', note: '车头副队占领武器实验厂2号' },
         { building: '武器维修厂3号', leader: '涛哥', body: '酔过知酒浓，Molly，初冬心雪未眠，楠木', note: '车头副队占领武器维修厂1号' },
         { building: '机动组人员', leader: '/', body: '清雅，七姐，王者归来，虾仁，Aaron', note: '负责撞子弹和捡子弹，自由支援并远距离参与集结' }
