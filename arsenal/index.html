@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>兵工厂战略配置 · 永誓盟工具站</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">厂</div>
+    <div class="brand-text">
+      <h1>兵工厂战略配置</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+    <button class="btn ghost" id="btnExportCsv" title="导出 CSV 名单">导出CSV</button>
+    <button class="btn primary" id="btnExport">导出公示图片</button>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="card">
+    <div class="card-title"><span class="dot gold"></span><h3>公示标题与公告（导出图片顶部）</h3></div>
+    <div class="add-row">
+      <label class="field grow">标题<input id="inTitle" type="text" maxlength="40" spellcheck="false" /></label>
+    </div>
+    <div class="add-row" style="margin-top:10px">
+      <label class="field grow">公告（黑色粗体，每行一条）<textarea id="inNotice" rows="3" spellcheck="false" placeholder="每行一条，如：开始前3分钟开反侦察，开宠物技能。"></textarea></label>
+      <label class="field grow">红色警示（红色粗体，每行一条）<textarea id="inRed" rows="3" spellcheck="false" placeholder="每行一条，如：子弹和采集很重要！！！"></textarea></label>
+    </div>
+  </div>
+
+  <div id="stages"></div>
+
+  <div class="card">
+    <div class="al-row" style="margin-top:0">
+      <button class="btn ghost" id="btnAddStage">＋ 添加阶段</button>
+      <span class="hint" style="margin:0 0 0 12px">表格里点任意文字可直接修改；「车身」为非固定人员，可各自交换位置；建筑名带游戏内建议列表。</span>
+    </div>
+  </div>
+
+  <details class="card map-card">
+    <summary>🗺️ 兵工厂资源地图（点开查看：建筑位置 / 开放阶段 / 积分收益）</summary>
+    <img src="map.jpg" alt="兵工厂资源地图" />
+  </details>
+
+</main>
+
+<footer class="footer">
+  <span>阶段分组 · 行内编辑 · 数据仅保存在本机浏览器</span>
+  <span class="sign"><a href="../index.html" style="color:inherit;text-decoration:none">← 永誓盟工具站</a></span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
