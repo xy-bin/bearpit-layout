@@ -64,6 +64,26 @@
   window.KVStore = { ok: ok, load: load, save: save, check: check, getPass: getPass, setPass: setPass };
 })();
 
+/* 云端存的是 UTC（ISO 8601，带 Z）。统一转成北京时间显示，避免把 22:34Z 误看成「昨天」。
+   withAgo=true 时附带「x 分钟前」，方便一眼判断数据新旧。 */
+window.fmtKVTime = function (s, withAgo) {
+  if (!s) return '未知时间';
+  var d = new Date(s);
+  if (isNaN(d.getTime())) return String(s);
+  var t = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+  function p(n) { return n < 10 ? '0' + n : String(n); }
+  var text = t.getUTCFullYear() + '-' + p(t.getUTCMonth() + 1) + '-' + p(t.getUTCDate()) + ' ' +
+    p(t.getUTCHours()) + ':' + p(t.getUTCMinutes()) + ':' + p(t.getUTCSeconds()) + '（北京时间）';
+  if (!withAgo) return text;
+  var diff = Date.now() - d.getTime();
+  var ago = diff < 0 ? '刚刚' :
+    diff < 60000 ? Math.floor(diff / 1000) + ' 秒前' :
+    diff < 3600000 ? Math.floor(diff / 60000) + ' 分钟前' :
+    diff < 86400000 ? Math.floor(diff / 3600000) + ' 小时前' :
+    Math.floor(diff / 86400000) + ' 天前';
+  return text + '，' + ago;
+};
+
 /* 云端同步器：boot 拉取、push 防抖上传、publish 立即上传、viewer 轮询；由各工具传入 collect/apply 钩子 */
 window.makeKVSync = function (cfg) {
   var timer = null, lastUpdatedAt = null, polling = false, dirty = false;
@@ -72,6 +92,7 @@ window.makeKVSync = function (cfg) {
   function status(t) { if (cfg.onStatus) try { cfg.onStatus(t); } catch (e) { /* 忽略 */ } }
   function pass() { return window.KVStore ? KVStore.getPass() : ''; }
   function ready() { return window.KVStore && KVStore.ok(); }
+  function when(s, ago) { return window.fmtKVTime ? fmtKVTime(s, ago) : (s || '未知时间'); }
 
   /* 启动：KV 有数据则应用（云端为准），返回远端行或 null */
   async function boot() {
@@ -82,7 +103,7 @@ window.makeKVSync = function (cfg) {
         lastUpdatedAt = row.updated_at;
         cfg.apply(row.payload);
         dirty = false;
-        status((pass() ? '云端已同步 ' : '云端实时数据 · ') + (lastUpdatedAt || ''));
+        status((pass() ? '云端已同步 ' : '云端实时数据 · ') + when(lastUpdatedAt, true));
         return row;
       }
       status('云端暂无数据（解锁后修改会上传）');
@@ -101,7 +122,7 @@ window.makeKVSync = function (cfg) {
         var r = await KVStore.save(cfg.key, cfg.collect(), pass());
         if (r && r.updated_at) lastUpdatedAt = r.updated_at;
         dirty = false;
-        status('已同步 ' + lastUpdatedAt);
+        status('已同步 ' + when(lastUpdatedAt, true));
       } catch (e) {
         var msg = String((e && e.message) || e);
         if (msg.indexOf('INVALID_PASSCODE') >= 0) {
@@ -121,7 +142,7 @@ window.makeKVSync = function (cfg) {
     var r = await KVStore.save(cfg.key, cfg.collect(), p);
     if (r && r.updated_at) lastUpdatedAt = r.updated_at;
     dirty = false;
-    status('已发布到云端 ' + (lastUpdatedAt || ''));
+    status('已发布到云端 ' + when(lastUpdatedAt, true));
     return r;
   }
 
@@ -136,7 +157,7 @@ window.makeKVSync = function (cfg) {
         if (row && row.payload && row.updated_at && row.updated_at !== lastUpdatedAt) {
           lastUpdatedAt = row.updated_at;
           cfg.apply(row.payload);
-          status('云端已更新 · ' + lastUpdatedAt);
+          status('云端已更新 · ' + when(lastUpdatedAt, true));
         }
       } catch (e) { /* 轮询失败静默 */ }
     }, POLL);
@@ -191,7 +212,7 @@ window.bindPublishButton = function (sync, btn, cloudBtn) {
     btn.textContent = '发布中…';
     try {
       var r = await sync.publish();
-      alert('已发布到云端 ✅\n更新时间：' + ((r && r.updated_at) || '未知') + '\n盟友刷新页面即可看到。');
+      alert('已发布到云端 ✅\n更新时间：' + window.fmtKVTime(r && r.updated_at, true) + '\n盟友刷新页面即可看到。');
     } catch (e) {
       var msg = String((e && e.message) || e);
       if (msg.indexOf('INVALID_PASSCODE') >= 0) { KVStore.setPass(''); if (cloudBtn) cloudBtn.textContent = '🔒 管理员'; }

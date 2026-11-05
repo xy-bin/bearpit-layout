@@ -791,7 +791,7 @@ async function refreshDefaultData() {
       const p = row && row.payload;
       if (p && Array.isArray(p.rows)) {
         if (btn) { btn.disabled = false; btn.textContent = label; }
-        if (!confirm('将用云端实时数据覆盖当前内容（更新于 ' + (row.updated_at || '未知时间') + '）：\n' +
+        if (!confirm('将用云端实时数据覆盖当前内容（更新于 ' + window.fmtKVTime(row.updated_at, true) + '）：\n' +
           '· ' + p.rows.length + ' 行堡垒时间安排' +
           (p.alliances ? '\n· 联盟：' + p.alliances.join(' / ') : '') +
           '\n\n当前内容将被替换（导出图片设置保留），可点「撤销更新」恢复。确定继续？')) return;
@@ -808,7 +808,7 @@ async function refreshDefaultData() {
         persist();
         const undo = $('#btnUndoRefresh');
         if (undo) undo.hidden = false;
-        alert('已更新为云端最新数据：' + rows.length + ' 行安排（' + (row.updated_at || '') + '）（可撤销）');
+        alert('已更新为云端最新数据：' + rows.length + ' 行安排（' + window.fmtKVTime(row.updated_at, true) + '）（可撤销）');
         return;
       }
     } catch (e) { /* 云端不可用 → 走内置名单兜底 */ }

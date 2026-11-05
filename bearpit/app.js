@@ -2135,7 +2135,7 @@ async function refreshDefaultData() {
         const tmp = JSON.parse(d);
         const towns = tmp.members.length, flags = (tmp.flags || []).length, mines = (tmp.mines || []).length;
         if (btn) { btn.disabled = false; btn.textContent = label; }
-        if (!confirm('将用云端实时数据覆盖当前布局（更新于 ' + (row.updated_at || '未知时间') + '）：\n' +
+        if (!confirm('将用云端实时数据覆盖当前布局（更新于 ' + window.fmtKVTime(row.updated_at, true) + '）：\n' +
           '· 城镇 ' + towns + ' 座 · 旗子 ' + flags + ' 面 · 联盟矿 ' + mines + ' 处' +
           '\n\n可用「撤销」恢复。确定继续？')) return;
         undoStack.push(snapshot());
@@ -2144,7 +2144,7 @@ async function refreshDefaultData() {
         if (typeof p.watermark === 'string') { state.watermark = p.watermark; const wm = $('#inWatermark'); if (wm) wm.value = p.watermark; }
         redoStack.length = 0;
         persistNow();
-        alert('已更新为云端最新数据（' + (row.updated_at || '') + '）');
+        alert('已更新为云端最新数据（' + window.fmtKVTime(row.updated_at, true) + '）');
         return;
       }
     } catch (e) { /* 云端不可用 → 走内置名单兜底 */ }
