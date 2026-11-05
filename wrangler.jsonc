@@ -1,0 +1,11 @@
+{
+  // Cloudflare Workers 静态资源模式：/api/* 走 worker.js，其余直接返回静态文件
+  "name": "bearpit-layout",
+  "compatibility_date": "2026-01-01",
+  "main": "worker.js",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  }
+}

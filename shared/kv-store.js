@@ -1,4 +1,4 @@
-/* Cloudflare KV 同源存取（/api/data，Pages Function 服务端校验口令）
+/* Cloudflare KV 同源存取（/api/data，Worker 服务端校验口令）
    纯静态双击 file:// 打开时自动降级为纯本地（localStorage），无网络请求 */
 (function () {
   'use strict';
@@ -12,14 +12,14 @@
 
   /* 读：{ payload, updated_at } 或 null */
   async function load(key) {
-    var r = await fetch('api/data?key=' + encodeURIComponent(key) + '&t=' + Date.now(), { cache: 'no-store' });
+    var r = await fetch('/api/data?key=' + encodeURIComponent(key) + '&t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error('KV_LOAD_FAILED');
     return await r.json();
   }
 
   /* 写：需口令，服务端校验 */
   async function save(key, payload, pass) {
-    var r = await fetch('api/data', {
+    var r = await fetch('/api/data', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ key: key, payload: payload, passcode: pass })
@@ -32,7 +32,7 @@
 
   /* 口令校验（解锁时用） */
   async function check(pass) {
-    var r = await fetch('api/data', {
+    var r = await fetch('/api/data', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ passcode: pass })
