@@ -118,10 +118,11 @@ window.makeKVSync = function (cfg) {
         lastUpdatedAt = row.updated_at;
         cfg.apply(row.payload);
         dirty = false;
-        status((pass() ? '云端已同步 ' : '云端实时数据 · ') + when(lastUpdatedAt, true));
+        /* 徽章只显示时间，完整说明放 hover：避免长文案把顶栏按钮挤到第二行 */
+        status(when(lastUpdatedAt, true));
         return row;
       }
-      status('云端暂无数据（解锁后修改会上传）');
+      status('云端暂无数据');
     } catch (e) { status('云端连接失败'); }
     return null;
   }
@@ -137,7 +138,7 @@ window.makeKVSync = function (cfg) {
         var r = await KVStore.save(cfg.key, cfg.collect(), pass());
         if (r && r.updated_at) lastUpdatedAt = r.updated_at;
         dirty = false;
-        status('已同步 ' + when(lastUpdatedAt, true));
+        status('已同步 · ' + when(lastUpdatedAt, true));
       } catch (e) {
         var msg = String((e && e.message) || e);
         if (msg.indexOf('INVALID_PASSCODE') >= 0) {

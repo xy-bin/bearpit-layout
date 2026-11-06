@@ -176,7 +176,7 @@
    避免 LOGO 与标题被垂直居中挤到按钮下方形成的错位（堡垒页此前展示异常的根因） */
 @media (max-width: 1400px) {
   .topbar { align-items: flex-start; }
-  .topbar .brand { padding-top: 2px; }
+  .topbar .brand { padding-top: 2px; margin-right: 14px; }
 }
 
 /* ---------- 窄屏 / 手机：分组整行换行，按钮不裁切 ---------- */
