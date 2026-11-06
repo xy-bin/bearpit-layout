@@ -172,6 +172,13 @@
 /* 数量统计（中心/人数/阶段数等）不在顶栏展示；熊坑已在画布统计条、堡垒/兵工厂在列表内保留 */
 .topbar .brand .stats { display: none !important; }
 
+/* 按钮组换行成两行时（窄屏 / 云端状态徽章较长），品牌区改为顶对齐，
+   避免 LOGO 与标题被垂直居中挤到按钮下方形成的错位（堡垒页此前展示异常的根因） */
+@media (max-width: 1400px) {
+  .topbar { align-items: flex-start; }
+  .topbar .brand { padding-top: 2px; }
+}
+
 /* ---------- 窄屏 / 手机：分组整行换行，按钮不裁切 ---------- */
 @media (max-width: 900px) {
   .topbar .actions { justify-content: flex-start; gap: 8px; }
