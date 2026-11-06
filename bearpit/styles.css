@@ -42,7 +42,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
+  /* 与 .page 同宽并居中：宽屏时两侧留白与下方卡片完全对齐（同兵工厂/堡垒），
+     背景条仍保持全宽 sticky，不影响长页面滚动操作 */
+  padding: 10px max(14px, calc((100% - 1240px) / 2));
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(10, 21, 30, 0.97), rgba(6, 13, 19, 0.94));
   backdrop-filter: blur(8px);
@@ -565,7 +567,7 @@ body {
 
 /* ---------- 移动端适配 ---------- */
 @media (max-width: 720px) {
-  .topbar { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+  .topbar { flex-wrap: wrap; padding: 8px; gap: 8px; }
   .brand { flex: 1; min-width: 0; }
   .brand-text h1 { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stats { font-size: 10px; }
