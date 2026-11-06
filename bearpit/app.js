@@ -1742,7 +1742,6 @@ function setupEvents() {
 
   $('#btnUndo').addEventListener('click', undo);
   $('#btnRedo').addEventListener('click', redo);
-  $('#btnAuto').addEventListener('click', () => $('#btnCompact').click());
   $('#btnExport').addEventListener('click', exportPNG);
 
   /* --- 导出布局 CSV（与模板同字段） --- */

@@ -145,7 +145,7 @@
 .topbar .actions.compact .cloud-status { padding: 5px 9px; font-size: 11px; }
 
 /* ---------- 品牌区统一：LOGO + 单行标题（三工具一致，不再显示数量统计） ---------- */
-.topbar .brand { gap: 12px; min-width: 0; }
+.topbar .brand { flex: 0 0 auto; gap: 12px; min-width: 0; }
 .topbar .brand .logo {
   flex: 0 0 auto;
   width: 40px;
@@ -178,7 +178,7 @@
   .topbar .actions .action-group { flex-wrap: wrap; }
 }
 @media (max-width: 720px) {
-  .topbar .brand { gap: 10px; }
+  .topbar .brand { flex: 1 1 100%; gap: 10px; }
   .topbar .brand .logo { width: 34px; height: 34px; border-radius: 10px; font-size: 17px; }
   .topbar .brand-text h1 { font-size: 16px; }
   .topbar .actions { width: 100%; gap: 8px; }
