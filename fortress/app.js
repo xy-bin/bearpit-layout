@@ -28,11 +28,13 @@ let notice = typeof INIT.notice === 'string' ? INIT.notice : SAMPLE_NOTICE;
 let expTitle = '堡垒要塞具体时间人员';
 let expSub = '无尽冬日 · 堡垒开启时间表';
 let expFoot = '永誓盟 · 工具站';
+/* 导出图片排除的联盟（页面表格与 CSV 始终保留全部数据） */
+let excluded = [];
 let nextId = rows.length + 1;
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
   if (window.kvSync) kvSync.push();
 }
@@ -42,7 +44,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
   key: 'fortress',
   debounceMs: 1200,
   pollMs: 30000,
-  collect: () => ({ v: 1, alliances, rows, notice, nextId, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
+  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
   apply: (o) => {
     try {
       if (!o || !Array.isArray(o.rows)) return;
@@ -50,6 +52,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       rows = o.rows;
       notice = typeof o.notice === 'string' ? o.notice : notice;
       nextId = o.nextId || rows.length + 1;
+      excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
       if (o.exp && typeof o.exp === 'object') {
         expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
         expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
@@ -103,6 +106,7 @@ function load() {
     rows = o.rows;
     notice = typeof o.notice === 'string' ? o.notice : notice;
     nextId = o.nextId || rows.length + 1;
+    excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
     if (o.exp && typeof o.exp === 'object') {
       expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
       expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
@@ -115,6 +119,35 @@ function load() {
 const FORT_NAMES = [];
 for (let n = 1; n <= 12; n++) FORT_NAMES.push(n + ' 号堡垒');
 for (let n = 1; n <= 4; n++) FORT_NAMES.push(n + ' 号要塞');
+
+/* 堡垒奖励（按游戏内「堡垒奖励」界面：图标主色 + 数值）
+   1/5/9 号堡垒 银矿 600，2/6/10 紫宝石 100+500，3/7/11 加速 400，4/8/12 徽章 90 */
+const FORT_REWARDS = (() => {
+  const m = {};
+  const FORT = [
+    { text: '600',     color: '#8fb0cc' },
+    { text: '100+500', color: '#a970e8' },
+    { text: '400',     color: '#3f9ad8' },
+    { text: '90',      color: '#bd84dd' }
+  ];
+  for (let n = 1; n <= 12; n++) m[n + '号堡垒'] = FORT[(n - 1) % 4];
+  const KEEP = [
+    { text: '420', color: '#e79a45' }, // 1 号要塞 橙色卷轴
+    { text: '600', color: '#e05555' }, // 2 号要塞 红色宝石
+    { text: '150', color: '#708fae' }, // 3 号要塞 装备
+    { text: '100', color: '#e8b93c' }  // 4 号要塞 金色徽章
+  ];
+  KEEP.forEach((v, i) => { m[(i + 1) + '号要塞'] = v; });
+  return m;
+})();
+
+/* 名称归一化：忽略空格、全角数字、異體「號」 */
+function rewardKey(s) {
+  return String(s || '').replace(/\s+/g, '')
+    .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/號/g, '号').replace(/壘/g, '垒');
+}
+function rewardFor(name) { return FORT_REWARDS[rewardKey(name)] || null; }
 
 /* 开启时间段：仅 5 个节点，可另选加 0~55 分钟（如 15:00 + 15分 = 15:15） */
 const TIME_SLOTS = ['10:00', '12:00', '15:00', '19:30', '21:00'];
@@ -186,6 +219,7 @@ function renderAllianceUI() {
     del.addEventListener('click', () => {
       if (!confirm('删除联盟「' + name + '」？其名下堡垒的联盟将置空。')) return;
       alliances = alliances.filter(a => a !== name);
+      excluded = excluded.filter(a => a !== name);
       rows.forEach(r => { if (r.al === name) r.al = ''; });
       persist(); renderAll();
     });
@@ -237,7 +271,25 @@ function renderTable() {
 
     const tdFort = document.createElement('td');
     tdFort.className = 'fort-name';
-    tdFort.textContent = r.fort;
+    const fn = document.createElement('span');
+    fn.className = 'fort-text';
+    fn.textContent = r.fort;
+    tdFort.appendChild(fn);
+    const rw = rewardFor(r.fort);
+    if (rw) {
+      const tag = document.createElement('span');
+      tag.className = 'reward-tag';
+      tag.style.color = rw.color;
+      tag.style.borderColor = rw.color + '66';
+      tag.style.background = rw.color + '1f';
+      tag.title = r.fort + ' · 奖励 ' + rw.text;
+      const dot = document.createElement('i');
+      dot.style.background = rw.color;
+      const val = document.createElement('b');
+      val.textContent = rw.text;
+      tag.append(dot, val);
+      tdFort.appendChild(tag);
+    }
 
     const tdTime = document.createElement('td');
     tdTime.className = 'td-time';
@@ -314,10 +366,42 @@ function renderStats() {
   $('#stats').textContent = rows.length + ' 座堡垒 · 已填时间 ' + filled + ' · 联盟 ' + alliances.length + ' 个';
 }
 
+/* 导出图片排除联盟：点 chip 切换；只影响导出图片，表格与 CSV 保留全部数据 */
+function renderExcludedUI() {
+  const box = $('#exAlChips');
+  if (!box) return;
+  excluded = excluded.filter(a => alliances.includes(a));
+  box.textContent = '';
+  alliances.forEach(name => {
+    const on = excluded.includes(name);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ex-chip' + (on ? ' active' : '');
+    chip.title = on ? '已排除，点击恢复导出' : '点击在导出图片中排除该联盟';
+    const dot = document.createElement('i');
+    dot.style.background = alColor(name);
+    const label = document.createElement('span');
+    label.textContent = on ? name + ' ✕' : name;
+    chip.append(dot, label);
+    chip.addEventListener('click', () => {
+      excluded = on ? excluded.filter(x => x !== name) : excluded.concat(name);
+      persist();
+      renderExcludedUI();
+    });
+    box.appendChild(chip);
+  });
+  const shown = rows.filter(r => !excluded.includes(r.al)).length;
+  const sum = $('#exSummary');
+  if (sum) sum.textContent = excluded.length
+    ? '导出图片将显示 ' + shown + ' / ' + rows.length + ' 行（已排除 ' + excluded.length + ' 个联盟）'
+    : '当前导出全部 ' + rows.length + ' 行';
+}
+
 function renderAll() {
   renderAllianceUI();
   renderTable();
   renderStats();
+  renderExcludedUI();
 }
 
 /* 行内切换联盟：点击联盟单元格 → 原地下拉 → 选完即保存 */
@@ -535,6 +619,7 @@ $('#btnAddAl').addEventListener('click', () => {
   persist();
   renderAllianceUI();
   renderStats();
+  renderExcludedUI();
   $('#fAl').value = name;
 });
 
@@ -575,12 +660,17 @@ function downloadFile(name, text, mime) {
 
 /* 导出图片：堡垒要塞具体时间人员（美化版表格图） */
 $('#btnExport').addEventListener('click', () => {
+  const outRows = rows.filter(r => !excluded.includes(r.al));
+  if (!outRows.length) {
+    alert('所有堡垒都被排除了，导出图片至少需要一行。\n请在「导出图片设置」里点掉一个已排除的联盟。');
+    return;
+  }
   const W = 920, pad = 28, rowH = 54, titleH = 100, headH = 56;
   const tableW = W - pad * 2;
   const cols = [140, 240, 160, tableW - 540]; // 联盟 / 堡垒要塞 / 时间 / 开集结人员
   const noticeH = notice ? 68 : 20;
   const footH = expFoot ? 34 : 16;
-  const H = titleH + headH + rows.length * rowH + noticeH + footH;
+  const H = titleH + headH + outRows.length * rowH + noticeH + footH;
 
   const scale = 2;
   const c = document.createElement('canvas');
@@ -638,7 +728,7 @@ $('#btnExport').addEventListener('click', () => {
   });
 
   // 数据行（淡黄斑马纹）
-  rows.forEach((r, i) => {
+  outRows.forEach((r, i) => {
     const y = bodyTop + i * rowH;
     ctx.fillStyle = i % 2 ? '#fff2cc' : '#fff8e2';
     ctx.fillRect(pad, y, tableW, rowH);
@@ -664,11 +754,34 @@ $('#btnExport').addEventListener('click', () => {
       ctx.fillText('—', cx + cols[0] / 2, y + rowH / 2);
     }
     cx += cols[0];
-    // 堡垒
+    // 堡垒（名称 + 奖励徽章，整体居中）
+    const rw = rewardFor(r.fort);
     ctx.fillStyle = '#1a1a1a';
     ctx.font = '700 19px ' + FONT;
-    ctx.textAlign = 'center';
-    ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
+    if (!rw) {
+      ctx.textAlign = 'center';
+      ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
+    } else {
+      const nameW = ctx.measureText(r.fort).width;
+      ctx.font = '700 13px ' + FONT;
+      const tagW = ctx.measureText(rw.text).width + 20;
+      const total = nameW + 8 + tagW;
+      let tx = cx + (cols[1] - total) / 2;
+      ctx.textAlign = 'left';
+      ctx.font = '700 19px ' + FONT;
+      ctx.fillText(r.fort, tx, y + rowH / 2);
+      tx += nameW + 8;
+      ctx.fillStyle = '#ffffff';
+      rr(tx, y + rowH / 2 - 13, tagW, 26, 8);
+      ctx.fill();
+      ctx.strokeStyle = rw.color; ctx.lineWidth = 1.4;
+      rr(tx, y + rowH / 2 - 13, tagW, 26, 8);
+      ctx.stroke();
+      ctx.fillStyle = rw.color;
+      ctx.font = '700 13px ' + FONT;
+      ctx.fillText(rw.text, tx + 10, y + rowH / 2);
+      ctx.textAlign = 'center';
+    }
     cx += cols[1];
     // 时间
     ctx.fillStyle = r.time ? '#7a4f01' : '#9aa7b0';
@@ -686,24 +799,24 @@ $('#btnExport').addEventListener('click', () => {
   ctx.strokeStyle = '#ecd9a0';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = 1; i < outRows.length; i++) {
     const y = bodyTop + i * rowH;
     ctx.moveTo(pad, y); ctx.lineTo(pad + tableW, y);
   }
   [cols[0], cols[0] + cols[1], cols[0] + cols[1] + cols[2]].forEach(w => {
     const x = pad + w;
     ctx.moveTo(x, bodyTop);
-    ctx.lineTo(x, bodyTop + rows.length * rowH);
+    ctx.lineTo(x, bodyTop + outRows.length * rowH);
   });
   ctx.stroke();
 
   // 表格外框（蓝）
   ctx.strokeStyle = '#2e75b6';
   ctx.lineWidth = 2;
-  ctx.strokeRect(pad, headY, tableW, headH + rows.length * rowH);
+  ctx.strokeRect(pad, headY, tableW, headH + outRows.length * rowH);
 
   // 公告（红字圆角横幅）
-  let yCur = bodyTop + rows.length * rowH;
+  let yCur = bodyTop + outRows.length * rowH;
   if (notice) {
     const ny = yCur + 14, nh = 50;
     ctx.fillStyle = '#fdecec';
@@ -801,6 +914,7 @@ async function refreshDefaultData() {
         } catch (e) { /* 存储不可用时跳过备份 */ }
         alliances = Array.isArray(p.alliances) && p.alliances.length ? p.alliances : alliances;
         rows = p.rows;
+        excluded = Array.isArray(p.excluded) ? p.excluded.filter(a => alliances.includes(a)) : excluded;
         notice = typeof p.notice === 'string' ? p.notice : notice;
         nextId = p.nextId || rows.length + 1;
         $('#inNotice').value = notice;
