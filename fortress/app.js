@@ -34,6 +34,8 @@ let excluded = [];
 let exportCols = ['al', 'fort', 'time', 'who'];
 /* 导出图片中单独排除的条目 id（默认空 = 全部导出）；新增条目自动包含 */
 let excludedRowIds = [];
+/* 联盟自定义颜色 { VOE: '#ff0000' }；未设置时按名字哈希取默认色 */
+let allianceColors = {};
 /* 用户自选的奖励道具覆盖：{ '1号堡垒': 'screw' }，值为 '' 表示该行不显示奖励 */
 let rewardOverrides = {};
 let nextId = rows.length + 1;
@@ -48,19 +50,33 @@ const EXPORT_COLS = {
 };
 const EXPORT_COL_KEYS = Object.keys(EXPORT_COLS);
 
-/* 从本地存档 / 云端数据里读取导出选项（字段缺失时保留当前值，兼容旧数据） */
-function readExportOpts(o) {
+/* 从本地存档 / 云端数据里读取共享设置（字段缺失时保留当前值，兼容旧数据） */
+function readSharedOpts(o) {
   if (!o || typeof o !== 'object') return;
   if (Array.isArray(o.exportCols)) {
     const v = o.exportCols.filter(k => EXPORT_COL_KEYS.includes(k));
     if (v.length) exportCols = v;
   }
   if (Array.isArray(o.excludedRowIds)) excludedRowIds = o.excludedRowIds;
+  readAllianceColors(o);
+}
+
+/* 从本地存档 / 云端数据里读取联盟自定义颜色（只接受 #rrggbb，过滤脏数据） */
+function readAllianceColors(o) {
+  if (!o || typeof o !== 'object') return;
+  const src = o.allianceColors;
+  if (!src || typeof src !== 'object' || Array.isArray(src)) return;
+  const c = {};
+  Object.keys(src).forEach(k => {
+    const v = src[k];
+    if (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) c[k] = v;
+  });
+  allianceColors = c;
 }
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, allianceColors, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
   if (window.kvSync) kvSync.push();
 }
@@ -70,7 +86,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
   key: 'fortress',
   debounceMs: 1200,
   pollMs: 30000,
-  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
+  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, allianceColors, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
   apply: (o) => {
     try {
       if (!o || !Array.isArray(o.rows)) return;
@@ -79,7 +95,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       notice = typeof o.notice === 'string' ? o.notice : notice;
       nextId = o.nextId || rows.length + 1;
       excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
-      readExportOpts(o);
+      readSharedOpts(o);
       rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
       if (o.exp && typeof o.exp === 'object') {
         expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
@@ -135,7 +151,7 @@ function load() {
     notice = typeof o.notice === 'string' ? o.notice : notice;
     nextId = o.nextId || rows.length + 1;
     excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
-    readExportOpts(o);
+    readSharedOpts(o);
     rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
     if (o.exp && typeof o.exp === 'object') {
       expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
@@ -229,9 +245,12 @@ function decomposeTime(t) {
 function normFort(s) { return String(s || '').replace(/\s+/g, ''); }
 function isKnownFort(s) { return FORT_NAMES.some(f => normFort(f) === normFort(s)); }
 
-/* 联盟颜色（按名字哈希取柔和色） */
+/* 联盟颜色：优先用自定义色，否则按名字哈希取柔和色 */
 const AL_COLORS = ['#56c8e8', '#f0c34a', '#38c870', '#ff8fab', '#b48cff', '#ffa05c', '#7ad0ff', '#c0ff8c', '#ff7b6b', '#8ea9ff'];
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
 function alColor(name) {
+  const custom = allianceColors[name];
+  if (custom && HEX6.test(custom)) return custom;
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return AL_COLORS[h % AL_COLORS.length];
@@ -264,8 +283,12 @@ function renderAllianceUI() {
   alliances.forEach(name => {
     const chip = document.createElement('span');
     chip.className = 'al-chip';
-    const dot = document.createElement('i');
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'al-dot-btn';
     dot.style.background = alColor(name);
+    dot.title = '点击更换「' + name + '」的颜色（表格与导出图片同步生效）';
+    dot.addEventListener('click', e => { e.stopPropagation(); openAlColorPicker(dot, name); });
     const label = document.createElement('b');
     label.textContent = name;
     const del = document.createElement('button');
@@ -274,6 +297,7 @@ function renderAllianceUI() {
       if (!confirm('删除联盟「' + name + '」？其名下堡垒的联盟将置空。')) return;
       alliances = alliances.filter(a => a !== name);
       excluded = excluded.filter(a => a !== name);
+      delete allianceColors[name];
       rows.forEach(r => { if (r.al === name) r.al = ''; });
       persist(); renderAll();
     });
@@ -294,7 +318,7 @@ function renderAllianceUI() {
 /* ============ 奖励图标自选（点表格里的徽章换道具，结果随本地/KV 同步） ============ */
 let rewardPickerCleanup = null;
 function closeRewardPicker() {
-  const p = document.querySelector('.reward-picker');
+  const p = document.querySelector('.reward-picker:not(.al-color-picker)');
   if (p) p.remove();
   if (rewardPickerCleanup) {
     document.removeEventListener('click', rewardPickerCleanup, true);
@@ -303,6 +327,7 @@ function closeRewardPicker() {
 }
 function openRewardPicker(anchor, fortName) {
   closeRewardPicker();
+  closeAlColorPicker();
   const key = rewardKey(fortName);
   const cur = rewardFor(fortName);
   const pop = document.createElement('div');
@@ -361,6 +386,94 @@ function openRewardPicker(anchor, fortName) {
   }, 0);
 }
 
+/* ============ 联盟颜色自选（点联盟 chip 前色块换色，结果随本地/KV 同步） ============ */
+let alColorCleanup = null;
+function closeAlColorPicker() {
+  const p = document.querySelector('.al-color-picker');
+  if (p) p.remove();
+  if (alColorCleanup) {
+    document.removeEventListener('click', alColorCleanup, true);
+    alColorCleanup = null;
+  }
+}
+function openAlColorPicker(anchor, name) {
+  closeAlColorPicker();
+  closeRewardPicker();
+  const cur = alColor(name);
+  const isCustom = !!allianceColors[name];
+  const pop = document.createElement('div');
+  pop.className = 'reward-picker al-color-picker';
+  const hd = document.createElement('div');
+  hd.className = 'rp-head';
+  hd.textContent = name + ' · 选择颜色（' + (isCustom ? '自定义 ' : '默认 ') + cur + '）';
+  pop.appendChild(hd);
+
+  const grid = document.createElement('div');
+  grid.className = 'al-color-grid';
+  AL_COLORS.forEach(hex => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'al-color-swatch' + (cur.toLowerCase() === hex.toLowerCase() ? ' active' : '');
+    b.style.background = hex;
+    b.title = hex;
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      allianceColors[name] = hex;
+      persist(); renderAll(); closeAlColorPicker();
+    });
+    grid.appendChild(b);
+  });
+  pop.appendChild(grid);
+
+  const row = document.createElement('label');
+  row.className = 'al-color-custom';
+  const picker = document.createElement('input');
+  picker.type = 'color';
+  picker.value = cur;
+  picker.title = '自定义任意颜色';
+  const txt = document.createElement('span');
+  txt.textContent = '自定义颜色';
+  row.append(picker, txt);
+  picker.addEventListener('change', e => {
+    e.stopPropagation();
+    const v = String(e.target.value || '').toLowerCase();
+    if (HEX6.test(v)) {
+      allianceColors[name] = v;
+      persist(); renderAll(); closeAlColorPicker();
+    }
+  });
+  pop.appendChild(row);
+
+  const foot = document.createElement('div');
+  foot.className = 'rp-foot';
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'btn mini';
+  reset.textContent = '恢复默认';
+  reset.disabled = !isCustom;
+  reset.title = isCustom ? '清除自定义颜色，恢复按名字计算的默认色' : '当前已是默认色';
+  reset.addEventListener('click', e => {
+    e.stopPropagation();
+    delete allianceColors[name];
+    persist(); renderAll(); closeAlColorPicker();
+  });
+  foot.appendChild(reset);
+  pop.appendChild(foot);
+
+  document.body.appendChild(pop);
+  const r = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
+  const top = (r.bottom + ph + 8 > window.innerHeight ? Math.max(8, r.top - ph - 8) : r.bottom + 6);
+  pop.style.top = Math.max(8, Math.min(top, window.innerHeight - ph - 8)) + 'px';
+  setTimeout(() => {
+    alColorCleanup = e => {
+      if (!pop.contains(e.target) && e.target !== anchor) closeAlColorPicker();
+    };
+    document.addEventListener('click', alColorCleanup, true);
+  }, 0);
+}
+
 function renderTable() {
   const tbody = $('#tbody');
   tbody.textContent = '';
@@ -379,8 +492,10 @@ function renderTable() {
     tdAl.title = '点击切换联盟';
     if (r.al) {
       const dot = document.createElement('i');
-      dot.className = 'al-dot';
+      dot.className = 'al-dot clickable';
       dot.style.background = alColor(r.al);
+      dot.title = '点击更换「' + r.al + '」的颜色（点名字则修改联盟）';
+      dot.addEventListener('click', e => { e.stopPropagation(); openAlColorPicker(dot, r.al); });
       const b = document.createElement('span');
       b.className = 'al-name';
       b.textContent = r.al;
@@ -1143,7 +1258,7 @@ async function refreshDefaultData() {
         alliances = Array.isArray(p.alliances) && p.alliances.length ? p.alliances : alliances;
         rows = p.rows;
         excluded = Array.isArray(p.excluded) ? p.excluded.filter(a => alliances.includes(a)) : excluded;
-        readExportOpts(p);
+        readSharedOpts(p);
         rewardOverrides = (p.rewardOverrides && typeof p.rewardOverrides === 'object' && !Array.isArray(p.rewardOverrides)) ? p.rewardOverrides : rewardOverrides;
         notice = typeof p.notice === 'string' ? p.notice : notice;
         nextId = p.nextId || rows.length + 1;

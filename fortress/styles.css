@@ -90,6 +90,11 @@ a { color: var(--teal); }
   background: none; border: none; color: var(--txt-dim); cursor: pointer; font-size: 13px; padding: 0 2px;
 }
 .al-chip button:hover { color: var(--danger); }
+.al-chip .al-dot-btn {
+  width: 12px; height: 12px; padding: 0; border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 3px; flex: 0 0 auto; cursor: pointer;
+}
+.al-chip .al-dot-btn:hover { color: inherit; border-color: var(--teal); transform: scale(1.15); }
 .al-row input { width: 130px; }
 .hint { color: var(--txt-dim); font-size: 12px; margin-top: 12px; }
 
@@ -108,6 +113,8 @@ a { color: var(--teal); }
 .handle { cursor: grab; color: var(--txt-dim); font-size: 16px; user-select: none; text-align: center; }
 .handle:active { cursor: grabbing; }
 .al-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
+.al-dot.clickable { cursor: pointer; }
+.al-dot.clickable:hover { box-shadow: 0 0 0 2px rgba(86, 200, 232, .45); }
 .al-name { font-weight: 700; }
 .al-name.empty { color: var(--txt-dim); font-weight: 400; }
 .td-al { cursor: pointer; }
@@ -153,6 +160,21 @@ a { color: var(--teal); }
 .rp-item:hover { border-color: rgba(86, 200, 232, .5); background: rgba(86, 200, 232, .1); color: var(--txt); }
 .rp-item.active { border-color: var(--gold); background: rgba(240, 195, 74, .12); color: var(--txt); }
 .rp-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+/* 联盟颜色自选浮层 */
+.al-color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.al-color-swatch {
+  height: 30px; border-radius: 7px; border: 2px solid transparent;
+  cursor: pointer; font-family: inherit;
+}
+.al-color-swatch:hover { border-color: rgba(255, 255, 255, .75); }
+.al-color-swatch.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240, 195, 74, .3); }
+.al-color-custom { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12.5px; color: var(--txt-dim); }
+.al-color-custom input[type="color"] {
+  width: 48px; height: 30px; padding: 0; border: 1px solid var(--line);
+  border-radius: 6px; background: transparent; cursor: pointer; color-scheme: dark;
+}
+.al-color-picker .rp-foot .btn[disabled] { opacity: .45; cursor: not-allowed; }
 
 /* 导出排除联盟 chips */
 .ex-chip {
