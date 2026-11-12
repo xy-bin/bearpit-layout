@@ -123,6 +123,33 @@ a { color: var(--teal); }
 }
 .reward-tag i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
 .reward-icon { width: 16px; height: 16px; object-fit: contain; flex: 0 0 auto; }
+.reward-tag.clickable { cursor: pointer; }
+.reward-tag.clickable:hover { filter: brightness(1.35); }
+.reward-add {
+  margin-left: 6px; padding: 2px 8px; font-size: 11px; font-family: inherit;
+  border-radius: 999px; border: 1px dashed var(--line); background: transparent;
+  color: var(--txt-dim); cursor: pointer; vertical-align: middle;
+}
+.reward-add:hover { color: var(--teal); border-color: rgba(86, 200, 232, .5); }
+
+/* 奖励图标自选浮层 */
+.reward-picker {
+  position: fixed; z-index: 80; width: 320px; max-width: calc(100vw - 16px);
+  padding: 12px; border-radius: 12px; border: 1px solid rgba(86, 200, 232, .35);
+  background: #0e1c2a; box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+.rp-head { font-size: 12.5px; font-weight: 600; color: var(--txt); margin-bottom: 10px; }
+.rp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.rp-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 7px 2px; border-radius: 8px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03); color: var(--txt-dim);
+  font-size: 11px; font-family: inherit; cursor: pointer;
+}
+.rp-item img { width: 30px; height: 30px; object-fit: contain; }
+.rp-item:hover { border-color: rgba(86, 200, 232, .5); background: rgba(86, 200, 232, .1); color: var(--txt); }
+.rp-item.active { border-color: var(--gold); background: rgba(240, 195, 74, .12); color: var(--txt); }
+.rp-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 
 /* 导出排除联盟 chips */
 .ex-chip {

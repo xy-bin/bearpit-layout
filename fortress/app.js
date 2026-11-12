@@ -30,11 +30,13 @@ let expSub = '无尽冬日 · 堡垒开启时间表';
 let expFoot = '永誓盟 · 工具站';
 /* 导出图片排除的联盟（页面表格与 CSV 始终保留全部数据） */
 let excluded = [];
+/* 用户自选的奖励道具覆盖：{ '1号堡垒': 'screw' }，值为 '' 表示该行不显示奖励 */
+let rewardOverrides = {};
 let nextId = rows.length + 1;
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
   if (window.kvSync) kvSync.push();
 }
@@ -44,7 +46,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
   key: 'fortress',
   debounceMs: 1200,
   pollMs: 30000,
-  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
+  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
   apply: (o) => {
     try {
       if (!o || !Array.isArray(o.rows)) return;
@@ -53,6 +55,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       notice = typeof o.notice === 'string' ? o.notice : notice;
       nextId = o.nextId || rows.length + 1;
       excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
+      rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
       if (o.exp && typeof o.exp === 'object') {
         expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
         expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
@@ -107,6 +110,7 @@ function load() {
     notice = typeof o.notice === 'string' ? o.notice : notice;
     nextId = o.nextId || rows.length + 1;
     excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
+    rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
     if (o.exp && typeof o.exp === 'object') {
       expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
       expSub = typeof o.exp.sub === 'string' ? o.exp.sub : expSub;
@@ -134,15 +138,7 @@ const REWARD_ITEMS = {
   hpPill:        { name: '生命大药', img: 'rewards/hp-pill.png',        color: '#38c870' },
   marchPill:     { name: '出征大药', img: 'rewards/march-pill.png',     color: '#ffa05c' }
 };
-/* 导出图需要已解码的 Image；未加载完成时自动降级为纯数字胶囊 */
-const REWARD_IMG = {};
-Object.keys(REWARD_ITEMS).forEach(k => {
-  const im = new Image();
-  im.onload = () => { REWARD_IMG[k] = im; };
-  im.src = REWARD_ITEMS[k].img;
-});
-
-/* 设施奖励映射：item 为空表示道具待补，仅显示数字徽章 */
+/* 设施奖励默认映射（表格展示用；导出公示图不显示奖励） */
 const FORT_REWARDS = (() => {
   const m = {};
   const put = (key, item, qty, color) => { m[key] = { item, text: qty, color }; };
@@ -150,10 +146,10 @@ const FORT_REWARDS = (() => {
   [2, 6, 10].forEach(n => put(n + '号堡垒', 'screw', '500', '#a970e8'));
   [3, 7, 11].forEach(n => put(n + '号堡垒', 'boost', '400', '#3f9ad8'));
   [4, 8, 12].forEach(n => put(n + '号堡垒', 'teleport', '90', '#bd84dd'));
-  put('1号要塞', null, '420', '#e79a45');        // 道具待补
+  put('1号要塞', 'heroShard', '420', '#e8b93c');
   put('2号要塞', 'fireCrystal', '600', '#e05555');
   put('3号要塞', 'equipBox', '150', '#708fae');
-  put('4号要塞', 'heroShard', '100', '#e8b93c');
+  put('4号要塞', 'petBox', '100', '#e8b93c');
   return m;
 })();
 
@@ -163,7 +159,16 @@ function rewardKey(s) {
     .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
     .replace(/號/g, '号').replace(/壘/g, '垒');
 }
-function rewardFor(name) { return FORT_REWARDS[rewardKey(name)] || null; }
+/* 用户自选覆盖优先：'' = 该行不显示奖励；未覆盖则用默认映射 */
+function rewardFor(name) {
+  const key = rewardKey(name);
+  const base = FORT_REWARDS[key];
+  if (!base) return null;
+  if (!Object.prototype.hasOwnProperty.call(rewardOverrides, key)) return base;
+  const item = rewardOverrides[key];
+  if (!item || !REWARD_ITEMS[item]) return null;
+  return { item, text: base.text, color: REWARD_ITEMS[item].color, custom: true };
+}
 
 /* 开启时间段：仅 5 个节点，可另选加 0~55 分钟（如 15:00 + 15分 = 15:15） */
 const TIME_SLOTS = ['10:00', '12:00', '15:00', '19:30', '21:00'];
@@ -253,6 +258,76 @@ function renderAllianceUI() {
   });
 }
 
+/* ============ 奖励图标自选（点表格里的徽章换道具，结果随本地/KV 同步） ============ */
+let rewardPickerCleanup = null;
+function closeRewardPicker() {
+  const p = document.querySelector('.reward-picker');
+  if (p) p.remove();
+  if (rewardPickerCleanup) {
+    document.removeEventListener('click', rewardPickerCleanup, true);
+    rewardPickerCleanup = null;
+  }
+}
+function openRewardPicker(anchor, fortName) {
+  closeRewardPicker();
+  const key = rewardKey(fortName);
+  const cur = rewardFor(fortName);
+  const pop = document.createElement('div');
+  pop.className = 'reward-picker';
+  const hd = document.createElement('div');
+  hd.className = 'rp-head';
+  hd.textContent = fortName + ' · 选择奖励图标';
+  pop.appendChild(hd);
+  const grid = document.createElement('div');
+  grid.className = 'rp-grid';
+  Object.keys(REWARD_ITEMS).forEach(k => {
+    const it = REWARD_ITEMS[k];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rp-item' + (cur && cur.item === k ? ' active' : '');
+    const im = document.createElement('img');
+    im.src = it.img; im.alt = '';
+    const s = document.createElement('span');
+    s.textContent = it.name;
+    b.append(im, s);
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      rewardOverrides[key] = k;
+      persist(); renderTable(); closeRewardPicker();
+    });
+    grid.appendChild(b);
+  });
+  pop.appendChild(grid);
+  const foot = document.createElement('div');
+  foot.className = 'rp-foot';
+  [['不显示奖励', ''], ['恢复默认', null]].forEach(([label, val]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn mini';
+    b.textContent = label;
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      if (val === null) delete rewardOverrides[key];
+      else rewardOverrides[key] = val;
+      persist(); renderTable(); closeRewardPicker();
+    });
+    foot.appendChild(b);
+  });
+  pop.appendChild(foot);
+  document.body.appendChild(pop);
+  const r = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8)) + 'px';
+  const top = (r.bottom + ph + 8 > window.innerHeight ? Math.max(8, r.top - ph - 8) : r.bottom + 6);
+  pop.style.top = Math.max(8, Math.min(top, window.innerHeight - ph - 8)) + 'px';
+  setTimeout(() => {
+    rewardPickerCleanup = e => {
+      if (!pop.contains(e.target) && e.target !== anchor) closeRewardPicker();
+    };
+    document.addEventListener('click', rewardPickerCleanup, true);
+  }, 0);
+}
+
 function renderTable() {
   const tbody = $('#tbody');
   tbody.textContent = '';
@@ -295,11 +370,12 @@ function renderTable() {
     if (rw) {
       const item = rw.item ? REWARD_ITEMS[rw.item] : null;
       const tag = document.createElement('span');
-      tag.className = 'reward-tag';
+      tag.className = 'reward-tag clickable';
       tag.style.color = rw.color;
       tag.style.borderColor = rw.color + '66';
       tag.style.background = rw.color + '1f';
-      tag.title = r.fort + ' · ' + (item ? item.name + ' ×' + rw.text : '奖励 ' + rw.text);
+      tag.title = (item ? item.name + ' ×' + rw.text : '奖励 ' + rw.text) + ' · 点击更换图标';
+      tag.addEventListener('click', e => { e.stopPropagation(); openRewardPicker(tag, r.fort); });
       let icon;
       if (item) {
         icon = document.createElement('img');
@@ -314,6 +390,14 @@ function renderTable() {
       val.textContent = rw.text;
       tag.append(icon, val);
       tdFort.appendChild(tag);
+    } else if (Object.prototype.hasOwnProperty.call(FORT_REWARDS, rewardKey(r.fort))) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'reward-add';
+      add.textContent = '＋ 奖励';
+      add.title = '点击选择奖励图标';
+      add.addEventListener('click', e => { e.stopPropagation(); openRewardPicker(add, r.fort); });
+      tdFort.appendChild(add);
     }
 
     const tdTime = document.createElement('td');
@@ -779,37 +863,11 @@ $('#btnExport').addEventListener('click', () => {
       ctx.fillText('—', cx + cols[0] / 2, y + rowH / 2);
     }
     cx += cols[0];
-    // 堡垒（名称 + 奖励徽章，整体居中）
-    const rw = rewardFor(r.fort);
+    // 堡垒（公示图不展示奖励图标与数量，只保留设施名）
     ctx.fillStyle = '#1a1a1a';
     ctx.font = '700 19px ' + FONT;
-    if (!rw) {
-      ctx.textAlign = 'center';
-      ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
-    } else {
-      const item = rw.item ? REWARD_ITEMS[rw.item] : null;
-      const icon = item && REWARD_IMG[rw.item];
-      const nameW = ctx.measureText(r.fort).width;
-      ctx.font = '700 13px ' + FONT;
-      const tagW = ctx.measureText(rw.text).width + 20 + (icon ? 24 : 0);
-      const total = nameW + 8 + tagW;
-      let tx = cx + (cols[1] - total) / 2;
-      ctx.textAlign = 'left';
-      ctx.font = '700 19px ' + FONT;
-      ctx.fillText(r.fort, tx, y + rowH / 2);
-      tx += nameW + 8;
-      ctx.fillStyle = '#ffffff';
-      rr(tx, y + rowH / 2 - 13, tagW, 26, 8);
-      ctx.fill();
-      ctx.strokeStyle = rw.color; ctx.lineWidth = 1.4;
-      rr(tx, y + rowH / 2 - 13, tagW, 26, 8);
-      ctx.stroke();
-      if (icon) ctx.drawImage(icon, tx + 6, y + rowH / 2 - 11, 22, 22);
-      ctx.fillStyle = rw.color;
-      ctx.font = '700 13px ' + FONT;
-      ctx.fillText(rw.text, tx + 10 + (icon ? 24 : 0), y + rowH / 2);
-      ctx.textAlign = 'center';
-    }
+    ctx.textAlign = 'center';
+    ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
     cx += cols[1];
     // 时间
     ctx.fillStyle = r.time ? '#7a4f01' : '#9aa7b0';
@@ -870,12 +928,9 @@ $('#btnExport').addEventListener('click', () => {
     ctx.fillText(expFoot, W - pad, H - 16);
   }
 
-  let imgUrl;
-  try { imgUrl = c.toDataURL('image/png'); }
-  catch (e) { alert('奖励图标尚未加载完成或存在跨域限制，请刷新页面后重新导出'); return; }
   const a = document.createElement('a');
   a.download = '堡垒要塞时间_' + timeStamp() + '.png';
-  a.href = imgUrl;
+  a.href = c.toDataURL('image/png');
   a.click();
 });
 
@@ -946,6 +1001,7 @@ async function refreshDefaultData() {
         alliances = Array.isArray(p.alliances) && p.alliances.length ? p.alliances : alliances;
         rows = p.rows;
         excluded = Array.isArray(p.excluded) ? p.excluded.filter(a => alliances.includes(a)) : excluded;
+        rewardOverrides = (p.rewardOverrides && typeof p.rewardOverrides === 'object' && !Array.isArray(p.rewardOverrides)) ? p.rewardOverrides : rewardOverrides;
         notice = typeof p.notice === 'string' ? p.notice : notice;
         nextId = p.nextId || rows.length + 1;
         $('#inNotice').value = notice;
