@@ -366,6 +366,10 @@ function renderTable() {
     fn.className = 'fort-text';
     fn.textContent = r.fort;
     tdFort.appendChild(fn);
+
+    /* 奖励单独一列（导出公示图按约定不显示奖励） */
+    const tdReward = document.createElement('td');
+    tdReward.className = 'td-reward';
     const rw = rewardFor(r.fort);
     if (rw) {
       const item = rw.item ? REWARD_ITEMS[rw.item] : null;
@@ -389,7 +393,7 @@ function renderTable() {
       const val = document.createElement('b');
       val.textContent = rw.text;
       tag.append(icon, val);
-      tdFort.appendChild(tag);
+      tdReward.appendChild(tag);
     } else if (Object.prototype.hasOwnProperty.call(FORT_REWARDS, rewardKey(r.fort))) {
       const add = document.createElement('button');
       add.type = 'button';
@@ -397,7 +401,7 @@ function renderTable() {
       add.textContent = '＋ 奖励';
       add.title = '点击选择奖励图标';
       add.addEventListener('click', e => { e.stopPropagation(); openRewardPicker(add, r.fort); });
-      tdFort.appendChild(add);
+      tdReward.appendChild(add);
     }
 
     const tdTime = document.createElement('td');
@@ -439,7 +443,7 @@ function renderTable() {
     box.append(up, down, del);
     tdOp.appendChild(box);
 
-    tr.append(tdDrag, tdAl, tdFort, tdTime, tdWho, tdOp);
+    tr.append(tdDrag, tdAl, tdFort, tdReward, tdTime, tdWho, tdOp);
 
     /* 拖拽排序 */
     tr.addEventListener('dragstart', e => {

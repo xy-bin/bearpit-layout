@@ -103,6 +103,8 @@ a { color: var(--teal); }
 .ftable tr.drag-over td { border-top: 2px solid var(--teal); }
 .ftable tr.dragging { opacity: 0.45; }
 .w-drag { width: 36px; } .w-time { width: 178px; } .w-op { width: 150px; }
+.w-reward { width: 132px; }
+.ftable th.w-reward, .td-reward { text-align: center; }
 .handle { cursor: grab; color: var(--txt-dim); font-size: 16px; user-select: none; text-align: center; }
 .handle:active { cursor: grabbing; }
 .al-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
@@ -111,7 +113,7 @@ a { color: var(--teal); }
 .td-al { cursor: pointer; }
 .td-al:hover .al-name { text-decoration: underline dotted; text-underline-offset: 3px; }
 .al-edit { background: #0e1622; color: var(--txt); border: 1px solid var(--teal); border-radius: 5px; font-size: 13.5px; padding: 3px 4px; color-scheme: dark; width: 100%; max-width: 100%; box-sizing: border-box; font-family: inherit; }
-/* 堡垒名 + 奖励徽章（td 保持 table-cell，徽章用 inline-flex 跟随名字，窄列自动换行） */
+/* 堡垒名 / 奖励徽章（奖励独立一列，居中显示，可点击更换图标） */
 .fort-name { font-weight: 600; }
 .fort-text { font-weight: 600; }
 .reward-tag {
@@ -125,6 +127,7 @@ a { color: var(--teal); }
 .reward-icon { width: 16px; height: 16px; object-fit: contain; flex: 0 0 auto; }
 .reward-tag.clickable { cursor: pointer; }
 .reward-tag.clickable:hover { filter: brightness(1.35); }
+.td-reward .reward-tag, .td-reward .reward-add { margin-left: 0; }
 .reward-add {
   margin-left: 6px; padding: 2px 8px; font-size: 11px; font-family: inherit;
   border-radius: 999px; border: 1px dashed var(--line); background: transparent;
@@ -208,10 +211,11 @@ a { color: var(--teal); }
   .al-row input { width: 110px; }
 
   .table-card { padding: 12px 10px; }
-  .ftable { min-width: 620px; font-size: 13px; }
+  .ftable { min-width: 760px; font-size: 13px; }
   .ftable th { font-size: 11.5px; padding: 7px 8px; }
   .ftable td { padding: 8px; }
   .w-time { width: 150px; }
+  .w-reward { width: 120px; }
   .w-op { width: 130px; }
   .time-txt { font-size: 14px; }
 
