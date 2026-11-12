@@ -120,24 +120,40 @@ const FORT_NAMES = [];
 for (let n = 1; n <= 12; n++) FORT_NAMES.push(n + ' 号堡垒');
 for (let n = 1; n <= 4; n++) FORT_NAMES.push(n + ' 号要塞');
 
-/* 堡垒奖励（按游戏内「堡垒奖励」界面：图标主色 + 数值）
-   1/5/9 号堡垒 银矿 600，2/6/10 紫宝石 100+500，3/7/11 加速 400，4/8/12 徽章 90 */
+/* 游戏道具图标库（11 张，128×128 透明 PNG） */
+const REWARD_ITEMS = {
+  petBox:        { name: '宠物箱子', img: 'rewards/pet-box.png',        color: '#e8b93c' },
+  fireCrystal:   { name: '火晶',     img: 'rewards/fire-crystal.png',   color: '#e05555' },
+  equipBox:      { name: '装备箱子', img: 'rewards/equip-box.png',      color: '#708fae' },
+  heroShard:     { name: '英雄碎片', img: 'rewards/hero-shard.png',     color: '#e8b93c' },
+  petStone:      { name: '宠物石头', img: 'rewards/pet-stone.png',      color: '#8fb0cc' },
+  screw:         { name: '螺丝',     img: 'rewards/screw.png',          color: '#a970e8' },
+  boost:         { name: '通用加速', img: 'rewards/boost.png',          color: '#3f9ad8' },
+  penetratePill: { name: '穿透大药', img: 'rewards/penetrate-pill.png', color: '#e79a45' },
+  teleport:      { name: '高迁',     img: 'rewards/teleport.png',       color: '#bd84dd' },
+  hpPill:        { name: '生命大药', img: 'rewards/hp-pill.png',        color: '#38c870' },
+  marchPill:     { name: '出征大药', img: 'rewards/march-pill.png',     color: '#ffa05c' }
+};
+/* 导出图需要已解码的 Image；未加载完成时自动降级为纯数字胶囊 */
+const REWARD_IMG = {};
+Object.keys(REWARD_ITEMS).forEach(k => {
+  const im = new Image();
+  im.onload = () => { REWARD_IMG[k] = im; };
+  im.src = REWARD_ITEMS[k].img;
+});
+
+/* 设施奖励映射：item 为空表示道具待补，仅显示数字徽章 */
 const FORT_REWARDS = (() => {
   const m = {};
-  const FORT = [
-    { text: '600',     color: '#8fb0cc' },
-    { text: '100+500', color: '#a970e8' },
-    { text: '400',     color: '#3f9ad8' },
-    { text: '90',      color: '#bd84dd' }
-  ];
-  for (let n = 1; n <= 12; n++) m[n + '号堡垒'] = FORT[(n - 1) % 4];
-  const KEEP = [
-    { text: '420', color: '#e79a45' }, // 1 号要塞 橙色卷轴
-    { text: '600', color: '#e05555' }, // 2 号要塞 红色宝石
-    { text: '150', color: '#708fae' }, // 3 号要塞 装备
-    { text: '100', color: '#e8b93c' }  // 4 号要塞 金色徽章
-  ];
-  KEEP.forEach((v, i) => { m[(i + 1) + '号要塞'] = v; });
+  const put = (key, item, qty, color) => { m[key] = { item, text: qty, color }; };
+  [1, 5, 9].forEach(n => put(n + '号堡垒', 'petStone', '600', '#8fb0cc'));
+  [2, 6, 10].forEach(n => put(n + '号堡垒', 'screw', '500', '#a970e8'));
+  [3, 7, 11].forEach(n => put(n + '号堡垒', 'boost', '400', '#3f9ad8'));
+  [4, 8, 12].forEach(n => put(n + '号堡垒', 'teleport', '90', '#bd84dd'));
+  put('1号要塞', null, '420', '#e79a45');        // 道具待补
+  put('2号要塞', 'fireCrystal', '600', '#e05555');
+  put('3号要塞', 'equipBox', '150', '#708fae');
+  put('4号要塞', 'heroShard', '100', '#e8b93c');
   return m;
 })();
 
@@ -277,17 +293,26 @@ function renderTable() {
     tdFort.appendChild(fn);
     const rw = rewardFor(r.fort);
     if (rw) {
+      const item = rw.item ? REWARD_ITEMS[rw.item] : null;
       const tag = document.createElement('span');
       tag.className = 'reward-tag';
       tag.style.color = rw.color;
       tag.style.borderColor = rw.color + '66';
       tag.style.background = rw.color + '1f';
-      tag.title = r.fort + ' · 奖励 ' + rw.text;
-      const dot = document.createElement('i');
-      dot.style.background = rw.color;
+      tag.title = r.fort + ' · ' + (item ? item.name + ' ×' + rw.text : '奖励 ' + rw.text);
+      let icon;
+      if (item) {
+        icon = document.createElement('img');
+        icon.className = 'reward-icon';
+        icon.src = item.img;
+        icon.alt = item.name;
+      } else {
+        icon = document.createElement('i');
+        icon.style.background = rw.color;
+      }
       const val = document.createElement('b');
       val.textContent = rw.text;
-      tag.append(dot, val);
+      tag.append(icon, val);
       tdFort.appendChild(tag);
     }
 
@@ -762,9 +787,11 @@ $('#btnExport').addEventListener('click', () => {
       ctx.textAlign = 'center';
       ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
     } else {
+      const item = rw.item ? REWARD_ITEMS[rw.item] : null;
+      const icon = item && REWARD_IMG[rw.item];
       const nameW = ctx.measureText(r.fort).width;
       ctx.font = '700 13px ' + FONT;
-      const tagW = ctx.measureText(rw.text).width + 20;
+      const tagW = ctx.measureText(rw.text).width + 20 + (icon ? 24 : 0);
       const total = nameW + 8 + tagW;
       let tx = cx + (cols[1] - total) / 2;
       ctx.textAlign = 'left';
@@ -777,9 +804,10 @@ $('#btnExport').addEventListener('click', () => {
       ctx.strokeStyle = rw.color; ctx.lineWidth = 1.4;
       rr(tx, y + rowH / 2 - 13, tagW, 26, 8);
       ctx.stroke();
+      if (icon) ctx.drawImage(icon, tx + 6, y + rowH / 2 - 11, 22, 22);
       ctx.fillStyle = rw.color;
       ctx.font = '700 13px ' + FONT;
-      ctx.fillText(rw.text, tx + 10, y + rowH / 2);
+      ctx.fillText(rw.text, tx + 10 + (icon ? 24 : 0), y + rowH / 2);
       ctx.textAlign = 'center';
     }
     cx += cols[1];
@@ -842,9 +870,12 @@ $('#btnExport').addEventListener('click', () => {
     ctx.fillText(expFoot, W - pad, H - 16);
   }
 
+  let imgUrl;
+  try { imgUrl = c.toDataURL('image/png'); }
+  catch (e) { alert('奖励图标尚未加载完成或存在跨域限制，请刷新页面后重新导出'); return; }
   const a = document.createElement('a');
   a.download = '堡垒要塞时间_' + timeStamp() + '.png';
-  a.href = c.toDataURL('image/png');
+  a.href = imgUrl;
   a.click();
 });
 
