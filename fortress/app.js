@@ -30,13 +30,37 @@ let expSub = '无尽冬日 · 堡垒开启时间表';
 let expFoot = '永誓盟 · 工具站';
 /* 导出图片排除的联盟（页面表格与 CSV 始终保留全部数据） */
 let excluded = [];
+/* 导出图片显示的列，数组顺序即图中从左到右；可选 al / fort / reward / time / who */
+let exportCols = ['al', 'fort', 'time', 'who'];
+/* 导出图片中单独排除的条目 id（默认空 = 全部导出）；新增条目自动包含 */
+let excludedRowIds = [];
 /* 用户自选的奖励道具覆盖：{ '1号堡垒': 'screw' }，值为 '' 表示该行不显示奖励 */
 let rewardOverrides = {};
 let nextId = rows.length + 1;
 
+/* 导出图列定义（基础宽度之和 864 = 导出表宽，默认 4 列视觉与旧版完全一致） */
+const EXPORT_COLS = {
+  al:     { label: '联盟',       w: 140 },
+  fort:   { label: '堡垒要塞',   w: 240 },
+  reward: { label: '奖励',       w: 170 },
+  time:   { label: '时间',       w: 160 },
+  who:    { label: '开集结人员', w: 324 }
+};
+const EXPORT_COL_KEYS = Object.keys(EXPORT_COLS);
+
+/* 从本地存档 / 云端数据里读取导出选项（字段缺失时保留当前值，兼容旧数据） */
+function readExportOpts(o) {
+  if (!o || typeof o !== 'object') return;
+  if (Array.isArray(o.exportCols)) {
+    const v = o.exportCols.filter(k => EXPORT_COL_KEYS.includes(k));
+    if (v.length) exportCols = v;
+  }
+  if (Array.isArray(o.excludedRowIds)) excludedRowIds = o.excludedRowIds;
+}
+
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }));
   } catch (e) { /* 存储不可用时忽略 */ }
   if (window.kvSync) kvSync.push();
 }
@@ -46,7 +70,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
   key: 'fortress',
   debounceMs: 1200,
   pollMs: 30000,
-  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
+  collect: () => ({ v: 1, alliances, rows, notice, nextId, excluded, exportCols, excludedRowIds, rewardOverrides, exp: { title: expTitle, sub: expSub, foot: expFoot } }),
   apply: (o) => {
     try {
       if (!o || !Array.isArray(o.rows)) return;
@@ -55,6 +79,7 @@ const kvSync = window.makeKVSync ? window.makeKVSync({
       notice = typeof o.notice === 'string' ? o.notice : notice;
       nextId = o.nextId || rows.length + 1;
       excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
+      readExportOpts(o);
       rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
       if (o.exp && typeof o.exp === 'object') {
         expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
@@ -110,6 +135,7 @@ function load() {
     notice = typeof o.notice === 'string' ? o.notice : notice;
     nextId = o.nextId || rows.length + 1;
     excluded = Array.isArray(o.excluded) ? o.excluded.filter(a => alliances.includes(a)) : excluded;
+    readExportOpts(o);
     rewardOverrides = (o.rewardOverrides && typeof o.rewardOverrides === 'object' && !Array.isArray(o.rewardOverrides)) ? o.rewardOverrides : rewardOverrides;
     if (o.exp && typeof o.exp === 'object') {
       expTitle = typeof o.exp.title === 'string' ? o.exp.title : expTitle;
@@ -138,7 +164,14 @@ const REWARD_ITEMS = {
   hpPill:        { name: '生命大药', img: 'rewards/hp-pill.png',        color: '#38c870' },
   marchPill:     { name: '出征大药', img: 'rewards/march-pill.png',     color: '#ffa05c' }
 };
-/* 设施奖励默认映射（表格展示用；导出公示图不显示奖励） */
+/* 导出图「奖励」列需要已解码的 Image；未加载完成时自动降级为纯数字胶囊 */
+const REWARD_IMG = {};
+Object.keys(REWARD_ITEMS).forEach(k => {
+  const im = new Image();
+  im.onload = () => { REWARD_IMG[k] = im; };
+  im.src = REWARD_ITEMS[k].img;
+});
+/* 设施奖励默认映射（表格「奖励」列；导出图可通过列设置显示） */
 const FORT_REWARDS = (() => {
   const m = {};
   const put = (key, item, qty, color) => { m[key] = { item, text: qty, color }; };
@@ -479,35 +512,105 @@ function renderStats() {
   $('#stats').textContent = rows.length + ' 座堡垒 · 已填时间 ' + filled + ' · 联盟 ' + alliances.length + ' 个';
 }
 
-/* 导出图片排除联盟：点 chip 切换；只影响导出图片，表格与 CSV 保留全部数据 */
+/* 导出图片展示内容设置：显示列 / 逐条条目 / 排除联盟；只影响导出图片，表格与 CSV 不受影响 */
 function renderExcludedUI() {
-  const box = $('#exAlChips');
-  if (!box) return;
   excluded = excluded.filter(a => alliances.includes(a));
-  box.textContent = '';
-  alliances.forEach(name => {
-    const on = excluded.includes(name);
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'ex-chip' + (on ? ' active' : '');
-    chip.title = on ? '已排除，点击恢复导出' : '点击在导出图片中排除该联盟';
-    const dot = document.createElement('i');
-    dot.style.background = alColor(name);
-    const label = document.createElement('span');
-    label.textContent = on ? name + ' ✕' : name;
-    chip.append(dot, label);
-    chip.addEventListener('click', () => {
-      excluded = on ? excluded.filter(x => x !== name) : excluded.concat(name);
-      persist();
-      renderExcludedUI();
+  const liveIds = rows.map(r => r.id);
+  excludedRowIds = excludedRowIds.filter(id => liveIds.includes(id));
+
+  /* 1) 按联盟整批排除 */
+  const box = $('#exAlChips');
+  if (box) {
+    box.textContent = '';
+    alliances.forEach(name => {
+      const on = excluded.includes(name);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ex-chip' + (on ? ' active' : '');
+      chip.title = on ? '已排除，点击恢复导出' : '点击在导出图片中排除该联盟';
+      const dot = document.createElement('i');
+      dot.style.background = alColor(name);
+      const label = document.createElement('span');
+      label.textContent = on ? name + ' ✕' : name;
+      chip.append(dot, label);
+      chip.addEventListener('click', () => {
+        excluded = on ? excluded.filter(x => x !== name) : excluded.concat(name);
+        persist();
+        renderExcludedUI();
+      });
+      box.appendChild(chip);
     });
-    box.appendChild(chip);
-  });
-  const shown = rows.filter(r => !excluded.includes(r.al)).length;
+  }
+
+  /* 2) 导出图显示的列（按标准顺序，选中高亮） */
+  const colBox = $('#exColChips');
+  if (colBox) {
+    colBox.textContent = '';
+    EXPORT_COL_KEYS.forEach(k => {
+      const on = exportCols.includes(k);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ex-col-chip' + (on ? ' on' : '');
+      chip.textContent = (on ? '✓ ' : '') + EXPORT_COLS[k].label;
+      chip.title = on ? '已显示，点击从导出图片中隐藏这一列' : '已隐藏，点击加入导出图片';
+      chip.addEventListener('click', () => {
+        if (on) {
+          if (exportCols.length === 1) { alert('导出图片至少要保留一列'); return; }
+          exportCols = exportCols.filter(x => x !== k);
+        } else {
+          exportCols = EXPORT_COL_KEYS.filter(x => x === k || exportCols.includes(x));
+        }
+        persist();
+        renderExcludedUI();
+      });
+      colBox.appendChild(chip);
+    });
+  }
+
+  /* 3) 逐条条目（默认全选；所属联盟被排除的条目显示半透明） */
+  const rowBox = $('#exRowChips');
+  if (rowBox) {
+    rowBox.textContent = '';
+    rows.forEach(r => {
+      const byAl = excluded.includes(r.al);
+      const off = byAl || excludedRowIds.includes(r.id);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ex-chip ex-row-chip' + (off ? ' active' : '') + (byAl ? ' by-al' : '');
+      chip.title = byAl
+        ? r.fort + '：所属联盟已排除，请先取消上方联盟排除'
+        : (r.al ? r.al + ' · ' : '') + r.fort + (r.time ? ' · ' + r.time : '') + (off ? '（已排除，点击恢复）' : '（点击从导出图片中排除）');
+      const dot = document.createElement('i');
+      dot.style.background = r.al ? alColor(r.al) : '#55636e';
+      const label = document.createElement('span');
+      label.textContent = r.fort + (off ? ' ✕' : '');
+      chip.append(dot, label);
+      chip.addEventListener('click', () => {
+        if (byAl) { alert('该条目所属联盟「' + r.al + '」已被排除，请先取消上方「导出排除联盟」里的 ' + r.al); return; }
+        excludedRowIds = off ? excludedRowIds.filter(x => x !== r.id) : excludedRowIds.concat(r.id);
+        persist();
+        renderExcludedUI();
+      });
+      rowBox.appendChild(chip);
+    });
+  }
+
+  const outCount = rows.filter(r => !excluded.includes(r.al) && !excludedRowIds.includes(r.id)).length;
   const sum = $('#exSummary');
-  if (sum) sum.textContent = excluded.length
-    ? '导出图片将显示 ' + shown + ' / ' + rows.length + ' 行（已排除 ' + excluded.length + ' 个联盟）'
-    : '当前导出全部 ' + rows.length + ' 行';
+  if (sum) {
+    const why = [];
+    if (excluded.length) why.push('排除 ' + excluded.length + ' 个联盟');
+    if (excludedRowIds.length) why.push('排除 ' + excludedRowIds.length + ' 个条目');
+    sum.textContent = '导出图片将显示 ' + outCount + ' / ' + rows.length + ' 行 · ' + exportCols.length + ' 列' +
+      (why.length ? '（' + why.join('、') + '）' : '');
+  }
+}
+
+/* 条目全选 / 全不选 */
+function bindExportRowTools() {
+  const all = $('#exRowsAll'), none = $('#exRowsNone');
+  if (all) all.addEventListener('click', () => { excludedRowIds = []; persist(); renderExcludedUI(); });
+  if (none) none.addEventListener('click', () => { excludedRowIds = rows.map(r => r.id); persist(); renderExcludedUI(); });
 }
 
 function renderAll() {
@@ -771,16 +874,20 @@ function downloadFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
-/* 导出图片：堡垒要塞具体时间人员（美化版表格图） */
+/* 导出图片：展示列与条目均可在「导出图片设置」里勾选（美化版表格图） */
 $('#btnExport').addEventListener('click', () => {
-  const outRows = rows.filter(r => !excluded.includes(r.al));
+  const activeCols = exportCols.filter(k => EXPORT_COLS[k]);
+  if (!activeCols.length) { alert('请至少选择一列用于导出图片'); return; }
+  const outRows = rows.filter(r => !excluded.includes(r.al) && !excludedRowIds.includes(r.id));
   if (!outRows.length) {
-    alert('所有堡垒都被排除了，导出图片至少需要一行。\n请在「导出图片设置」里点掉一个已排除的联盟。');
+    alert('没有可导出的条目。\n请在「导出图片设置」里恢复被排除的联盟或条目。');
     return;
   }
   const W = 920, pad = 28, rowH = 54, titleH = 100, headH = 56;
   const tableW = W - pad * 2;
-  const cols = [140, 240, 160, tableW - 540]; // 联盟 / 堡垒要塞 / 时间 / 开集结人员
+  /* 按选中列的基础宽度等比缩放填满表格；默认 4 列时恰好得到旧版 [140,240,160,324] */
+  const baseSum = activeCols.reduce((s, k) => s + EXPORT_COLS[k].w, 0);
+  const cols = activeCols.map(k => EXPORT_COLS[k].w * tableW / baseSum);
   const noticeH = notice ? 68 : 20;
   const footH = expFoot ? 34 : 16;
   const H = titleH + headH + outRows.length * rowH + noticeH + footH;
@@ -830,7 +937,7 @@ $('#btnExport').addEventListener('click', () => {
   ctx.fillRect(pad, headY, tableW, headH);
   ctx.fillStyle = '#2e75b6';
   ctx.fillRect(pad, bodyTop - 3, tableW, 3);
-  const heads = ['联盟', '堡垒要塞', '时间', '开集结人员'];
+  const heads = activeCols.map(k => EXPORT_COLS[k].label);
   let hx = pad;
   ctx.fillStyle = '#12395c';
   ctx.font = '700 19px ' + FONT;
@@ -840,48 +947,75 @@ $('#btnExport').addEventListener('click', () => {
     hx += cols[i];
   });
 
-  // 数据行（淡黄斑马纹）
-  outRows.forEach((r, i) => {
-    const y = bodyTop + i * rowH;
-    ctx.fillStyle = i % 2 ? '#fff2cc' : '#fff8e2';
+  // 数据行（淡黄斑马纹），按勾选的列依次绘制
+  outRows.forEach((r, ri) => {
+    const y = bodyTop + ri * rowH;
+    ctx.fillStyle = ri % 2 ? '#fff2cc' : '#fff8e2';
     ctx.fillRect(pad, y, tableW, rowH);
 
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
     let cx = pad;
-    // 联盟（圆角色块 + 文字，整体居中）
-    if (r.al) {
-      ctx.font = '700 19px ' + FONT;
-      const tw = ctx.measureText(r.al).width;
-      const total = 14 + 8 + tw;
-      const sx = cx + (cols[0] - total) / 2;
-      ctx.fillStyle = alColor(r.al);
-      rr(sx, y + rowH / 2 - 7, 14, 14, 4);
-      ctx.fill();
-      ctx.fillStyle = '#1a1a1a';
-      ctx.textAlign = 'left';
-      ctx.fillText(r.al, sx + 22, y + rowH / 2);
-    } else {
-      ctx.fillStyle = '#9aa7b0';
-      ctx.font = '400 18px ' + FONT;
-      ctx.fillText('—', cx + cols[0] / 2, y + rowH / 2);
-    }
-    cx += cols[0];
-    // 堡垒（公示图不展示奖励图标与数量，只保留设施名）
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = '700 19px ' + FONT;
-    ctx.textAlign = 'center';
-    ctx.fillText(r.fort, cx + cols[1] / 2, y + rowH / 2);
-    cx += cols[1];
-    // 时间
-    ctx.fillStyle = r.time ? '#7a4f01' : '#9aa7b0';
-    ctx.font = '800 20px ' + FONT;
-    ctx.fillText(r.time || '—', cx + cols[2] / 2, y + rowH / 2);
-    cx += cols[2];
-    // 人员
-    ctx.fillStyle = r.who ? '#1a1a1a' : '#9aa7b0';
-    ctx.font = '400 18px ' + FONT;
-    ctx.fillText(r.who || '—', cx + cols[3] / 2, y + rowH / 2);
+    activeCols.forEach((key, ci) => {
+      const cw = cols[ci], mid = cx + cw / 2, vy = y + rowH / 2;
+      ctx.textAlign = 'center';
+      if (key === 'al') {
+        // 联盟（圆角色块 + 文字，整体居中）
+        if (r.al) {
+          ctx.font = '700 19px ' + FONT;
+          const tw = ctx.measureText(r.al).width;
+          const total = 14 + 8 + tw;
+          const sx = cx + (cw - total) / 2;
+          ctx.fillStyle = alColor(r.al);
+          rr(sx, vy - 7, 14, 14, 4);
+          ctx.fill();
+          ctx.fillStyle = '#1a1a1a';
+          ctx.textAlign = 'left';
+          ctx.fillText(r.al, sx + 22, vy);
+        } else {
+          ctx.fillStyle = '#9aa7b0';
+          ctx.font = '400 18px ' + FONT;
+          ctx.fillText('—', mid, vy);
+        }
+      } else if (key === 'fort') {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.font = '700 19px ' + FONT;
+        ctx.fillText(r.fort, mid, vy);
+      } else if (key === 'time') {
+        ctx.fillStyle = r.time ? '#7a4f01' : '#9aa7b0';
+        ctx.font = '800 20px ' + FONT;
+        ctx.fillText(r.time || '—', mid, vy);
+      } else if (key === 'who') {
+        ctx.fillStyle = r.who ? '#1a1a1a' : '#9aa7b0';
+        ctx.font = '400 18px ' + FONT;
+        ctx.fillText(r.who || '—', mid, vy);
+      } else if (key === 'reward') {
+        // 奖励（图标 + 数量胶囊；图标未加载时降级为数字）
+        const rw = rewardFor(r.fort);
+        if (!rw) {
+          ctx.fillStyle = '#9aa7b0';
+          ctx.font = '400 18px ' + FONT;
+          ctx.fillText('—', mid, vy);
+        } else {
+          const item = rw.item ? REWARD_ITEMS[rw.item] : null;
+          const icon = item && REWARD_IMG[rw.item];
+          ctx.font = '700 15px ' + FONT;
+          const tagW = 20 + (icon ? 24 : 0) + ctx.measureText(rw.text).width;
+          const tx = cx + (cw - tagW) / 2;
+          ctx.fillStyle = '#ffffff';
+          rr(tx, vy - 14, tagW, 28, 9);
+          ctx.fill();
+          ctx.strokeStyle = rw.color;
+          ctx.lineWidth = 1.4;
+          rr(tx, vy - 14, tagW, 28, 9);
+          ctx.stroke();
+          if (icon) ctx.drawImage(icon, tx + 7, vy - 11, 22, 22);
+          ctx.fillStyle = rw.color;
+          ctx.textAlign = 'left';
+          ctx.fillText(rw.text, tx + 10 + (icon ? 24 : 0), vy);
+        }
+      }
+      cx += cw;
+    });
     ctx.textAlign = 'center';
   });
 
@@ -893,10 +1027,11 @@ $('#btnExport').addEventListener('click', () => {
     const y = bodyTop + i * rowH;
     ctx.moveTo(pad, y); ctx.lineTo(pad + tableW, y);
   }
-  [cols[0], cols[0] + cols[1], cols[0] + cols[1] + cols[2]].forEach(w => {
-    const x = pad + w;
-    ctx.moveTo(x, bodyTop);
-    ctx.lineTo(x, bodyTop + outRows.length * rowH);
+  let lineX = pad;
+  cols.slice(0, -1).forEach(w => {
+    lineX += w;
+    ctx.moveTo(lineX, bodyTop);
+    ctx.lineTo(lineX, bodyTop + outRows.length * rowH);
   });
   ctx.stroke();
 
@@ -932,9 +1067,12 @@ $('#btnExport').addEventListener('click', () => {
     ctx.fillText(expFoot, W - pad, H - 16);
   }
 
+  let imgUrl;
+  try { imgUrl = c.toDataURL('image/png'); }
+  catch (e) { alert('奖励图标尚未加载完成或存在跨域限制，请刷新页面后重新导出'); return; }
   const a = document.createElement('a');
   a.download = '堡垒要塞时间_' + timeStamp() + '.png';
-  a.href = c.toDataURL('image/png');
+  a.href = imgUrl;
   a.click();
 });
 
@@ -1005,6 +1143,7 @@ async function refreshDefaultData() {
         alliances = Array.isArray(p.alliances) && p.alliances.length ? p.alliances : alliances;
         rows = p.rows;
         excluded = Array.isArray(p.excluded) ? p.excluded.filter(a => alliances.includes(a)) : excluded;
+        readExportOpts(p);
         rewardOverrides = (p.rewardOverrides && typeof p.rewardOverrides === 'object' && !Array.isArray(p.rewardOverrides)) ? p.rewardOverrides : rewardOverrides;
         notice = typeof p.notice === 'string' ? p.notice : notice;
         nextId = p.nextId || rows.length + 1;
@@ -1072,6 +1211,7 @@ $('#expTitle').value = expTitle;
 $('#expSub').value = expSub;
 $('#expFoot').value = expFoot;
 renderAll();
+bindExportRowTools();
 
 /* 云端优先：拉到 KV 数据则覆盖显示，并启动观察者轮询 */
 setupCloudUI();

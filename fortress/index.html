@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#0a141e" />
 <title>堡垒开启时间 · 无尽冬日工具站</title>
-<link rel="stylesheet" href="styles.css?v=20261112d" />
+<link rel="stylesheet" href="styles.css?v=20261113a" />
 <link rel="stylesheet" href="../shared/topbar.css?v=20261106i" />
 </head>
 <body>
@@ -47,18 +47,28 @@
   </div>
 
   <div class="card">
-    <div class="card-title"><span class="dot teal"></span><h3>导出图片设置（标题 / 水印副标题 / 页脚 / 排除联盟）</h3></div>
+    <div class="card-title"><span class="dot teal"></span><h3>导出图片设置（标题 / 页脚 / 展示列 / 条目 / 排除联盟）</h3></div>
     <div class="add-row">
       <label class="field">导出标题<input id="expTitle" type="text" maxlength="24" spellcheck="false" /></label>
       <label class="field">水印副标题<input id="expSub" type="text" maxlength="30" spellcheck="false" /></label>
       <label class="field grow">页脚署名<input id="expFoot" type="text" maxlength="30" spellcheck="false" placeholder="如：永誓盟 · 工具站" /></label>
     </div>
     <div class="al-row ex-row">
+      <span class="al-label">导出显示列：</span>
+      <span id="exColChips" class="al-chips"></span>
+    </div>
+    <div class="al-row ex-row">
+      <span class="al-label">导出条目：</span>
+      <span id="exRowChips" class="al-chips"></span>
+      <button class="btn ghost mini" id="exRowsAll" type="button" title="导出全部条目">全选</button>
+      <button class="btn ghost mini" id="exRowsNone" type="button" title="全部条目都不导出">全不选</button>
+    </div>
+    <div class="al-row ex-row">
       <span class="al-label">导出排除联盟：</span>
       <span id="exAlChips" class="al-chips"></span>
       <span class="hint" id="exSummary" style="margin:0"></span>
     </div>
-    <p class="hint">点联盟名即可在导出图片中排除该联盟（划线 = 已排除）；页面表格与导出 CSV 始终保留全部数据。表格「奖励」列里的图标可点击更换（11 种道具任选，可设「不显示」/「恢复默认」），导出公示图只显示设施名、不显示奖励。</p>
+    <p class="hint">「导出显示列」点选要出现在公示图里的列（至少保留一列，可把「奖励」列加入）；「导出条目」逐条勾选，划线 = 不导出；「导出排除联盟」按联盟整批排除。以上设置只影响导出图片，页面表格与导出 CSV 始终保留全部数据。表格「奖励」列里的图标可点击更换（11 种道具任选，可设「不显示」/「恢复默认」）。</p>
   </div>
 
   <div class="card">
@@ -107,6 +117,6 @@
 <link rel="stylesheet" href="../shared/cloud.css" />
 <script src="../shared/kv-store.js?v=20261106i"></script>
 <script src="default-data.js?v=20261106i"></script>
-<script src="app.js?v=20261112d"></script>
+<script src="app.js?v=20261113a"></script>
 </body>
 </html>

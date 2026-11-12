@@ -168,6 +168,22 @@ a { color: var(--teal); }
   color: #ffb3a8; text-decoration: line-through;
 }
 .ex-chip.active i { opacity: .45; }
+/* 导出图片：显示列 chips / 逐条条目 chips */
+.ex-col-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, .03); color: var(--txt-dim);
+  font-family: inherit; transition: border-color .15s ease, background .15s ease;
+}
+.ex-col-chip:hover { border-color: rgba(86, 200, 232, .5); }
+.ex-col-chip.on {
+  border-color: rgba(86, 200, 232, .55); background: rgba(86, 200, 232, .14);
+  color: var(--teal); font-weight: 700;
+}
+.ex-row-chip { font-size: 12px; padding: 4px 10px; }
+.ex-row-chip.by-al { opacity: .48; }
+#exRowChips { max-height: 168px; overflow-y: auto; }
+.ex-row .btn.mini { flex: 0 0 auto; }
 .ex-row .hint { color: var(--teal); font-size: 12px; }
 .time-txt { font-family: Consolas, monospace; font-size: 15px; color: var(--gold); font-weight: 700; cursor: pointer; border-bottom: 1px dashed transparent; }
 .time-txt:hover { border-bottom-color: var(--gold); }
