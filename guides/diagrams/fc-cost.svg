@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 360" width="680" height="360">
+  <rect width="680" height="360" rx="16" fill="#0d1922"/>
+  <rect x="1" y="1" width="678" height="358" rx="16" fill="none" stroke="#1e3a4c" stroke-width="2"/>
+  <text x="340" y="40" text-anchor="middle" fill="#e8f4ff" font-size="22" font-weight="700" font-family="Microsoft YaHei, PingFang SC, sans-serif">熔炉火晶消耗阶梯（FC1 → FC10）</text>
+  <text x="340" y="62" text-anchor="middle" fill="#7fa7bd" font-size="12" font-family="Microsoft YaHei, PingFang SC, sans-serif">单位：普通火晶 / 每级含 5 个小阶段；FC6 起额外需要精炼火晶</text>
+
+  <line x1="52" y1="286" x2="646" y2="286" stroke="#24506a" stroke-width="2"/>
+  <g font-family="Microsoft YaHei, PingFang SC, sans-serif" text-anchor="middle">
+    <g fill="#56c8e8">
+      <rect x="62" y="214" width="38" height="72" rx="4"/><text x="81" y="206" fill="#cdeaf5" font-size="11">660</text><text x="81" y="304" fill="#8fc9dd" font-size="11">FC1</text>
+      <rect x="122" y="200" width="38" height="86" rx="4"/><text x="141" y="192" fill="#cdeaf5" font-size="11">790</text><text x="141" y="304" fill="#8fc9dd" font-size="11">FC2</text>
+      <rect x="182" y="156" width="38" height="130" rx="4"/><text x="201" y="148" fill="#cdeaf5" font-size="11">1190</text><text x="201" y="304" fill="#8fc9dd" font-size="11">FC3</text>
+      <rect x="242" y="133" width="38" height="153" rx="4"/><text x="261" y="125" fill="#cdeaf5" font-size="11">1400</text><text x="261" y="304" fill="#8fc9dd" font-size="11">FC4</text>
+      <rect x="302" y="103" width="38" height="183" rx="4" fill="#f0c34a"/><text x="321" y="95" fill="#ffe9a8" font-size="11">1675</text><text x="321" y="304" fill="#ffd87a" font-size="11">FC5</text>
+    </g>
+    <g fill="#ff8f6b">
+      <rect x="362" y="188" width="38" height="98" rx="4"/><text x="381" y="180" fill="#ffd0c0" font-size="11">900</text><text x="381" y="304" fill="#e8a08a" font-size="11">FC6</text>
+      <rect x="422" y="168" width="38" height="118" rx="4"/><text x="441" y="160" fill="#ffd0c0" font-size="11">1080</text><text x="441" y="304" fill="#e8a08a" font-size="11">FC7</text>
+      <rect x="482" y="168" width="38" height="118" rx="4"/><text x="501" y="160" fill="#ffd0c0" font-size="11">1080</text><text x="501" y="304" fill="#e8a08a" font-size="11">FC8</text>
+      <rect x="542" y="148" width="38" height="138" rx="4"/><text x="561" y="140" fill="#ffd0c0" font-size="11">1260</text><text x="561" y="304" fill="#e8a08a" font-size="11">FC9</text>
+      <rect x="602" y="114" width="38" height="172" rx="4"/><text x="621" y="106" fill="#ffd0c0" font-size="11">1575</text><text x="621" y="304" fill="#e8a08a" font-size="11">FC10</text>
+    </g>
+  </g>
+
+  <rect x="40" y="320" width="600" height="28" rx="8" fill="#122b38"/>
+  <text x="340" y="339" text-anchor="middle" fill="#9fd8e8" font-size="12" font-family="Microsoft YaHei, PingFang SC, sans-serif">熔炉合计 11,610 普通火晶 + 870 精炼火晶；使馆与三兵营另需大量火晶</text>
+</svg>

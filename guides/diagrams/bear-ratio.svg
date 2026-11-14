@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 360" width="680" height="360">
+  <rect width="680" height="360" rx="16" fill="#0d1922"/>
+  <rect x="1" y="1" width="678" height="358" rx="16" fill="none" stroke="#1e3a4c" stroke-width="2"/>
+  <text x="340" y="40" text-anchor="middle" fill="#e8f4ff" font-size="22" font-weight="700" font-family="Microsoft YaHei, PingFang SC, sans-serif">巨熊行动 · 配比与增益来源</text>
+  <text x="340" y="62" text-anchor="middle" fill="#7fa7bd" font-size="12" font-family="Microsoft YaHei, PingFang SC, sans-serif">盾 : 矛 : 弓，只上最高阶兵种，低级兵拉去采集 / 驻扎</text>
+
+  <g font-family="Microsoft YaHei, PingFang SC, sans-serif">
+    <text x="52" y="100" fill="#cdeaf5" font-size="13">1 : 2 : 7</text>
+    <rect x="140" y="86" width="470" height="20" rx="5" fill="#1b3442"/>
+    <rect x="140" y="86" width="47" height="20" rx="5" fill="#56c8e8"/>
+    <rect x="187" y="86" width="94" height="20" fill="#f0c34a"/>
+    <rect x="281" y="86" width="329" height="20" rx="5" fill="#b48cff"/>
+    <text x="622" y="101" fill="#9fd8e8" font-size="12">弓足时最优</text>
+
+    <text x="52" y="140" fill="#cdeaf5" font-size="13">1 : 3 : 6</text>
+    <rect x="140" y="126" width="470" height="20" rx="5" fill="#1b3442"/>
+    <rect x="140" y="126" width="47" height="20" rx="5" fill="#56c8e8"/>
+    <rect x="187" y="126" width="141" height="20" fill="#f0c34a"/>
+    <rect x="328" y="126" width="282" height="20" rx="5" fill="#b48cff"/>
+    <text x="622" y="141" fill="#9fd8e8" font-size="12">弓兵不足</text>
+
+    <text x="52" y="180" fill="#cdeaf5" font-size="13">5 : 2 : 3</text>
+    <rect x="140" y="166" width="470" height="20" rx="5" fill="#1b3442"/>
+    <rect x="140" y="166" width="235" height="20" rx="5" fill="#56c8e8"/>
+    <rect x="375" y="166" width="94" height="20" fill="#f0c34a"/>
+    <rect x="469" y="166" width="141" height="20" rx="5" fill="#b48cff"/>
+    <text x="622" y="181" fill="#9fd8e8" font-size="12">开荒通用</text>
+  </g>
+
+  <line x1="40" y1="212" x2="640" y2="212" stroke="#1e3a4c" stroke-width="2"/>
+  <g font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13">
+    <text x="52" y="240" fill="#ffd87a" font-size="14" font-weight="700">伤害四要素</text>
+    <text x="52" y="266" fill="#cdeaf5">① 车头 3 英雄技能全生效，穿好英雄装备</text>
+    <text x="52" y="290" fill="#cdeaf5">② 车身仅队长第一远征技能生效（杰西 / 书允 / 杰赛尔）</text>
+    <text x="52" y="314" fill="#cdeaf5">③ 陷阱强化满级 +25%，专家西里尔猎手之心</text>
+    <text x="52" y="338" fill="#cdeaf5">④ 弓兵攻击 / 穿透：装备、宝石、科技、宠物洗练</text>
+  </g>
+  <g font-family="Microsoft YaHei, PingFang SC, sans-serif" text-anchor="middle" font-size="12" fill="#0d1922">
+    <rect x="140" y="91" width="30" height="12" fill="#fff" opacity="0"/>
+  </g>
+</svg>

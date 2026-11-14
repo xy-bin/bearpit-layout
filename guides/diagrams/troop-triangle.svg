@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 360" width="680" height="360">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#f0c34a"/>
+    </marker>
+  </defs>
+  <rect width="680" height="360" rx="16" fill="#0d1922"/>
+  <rect x="1" y="1" width="678" height="358" rx="16" fill="none" stroke="#1e3a4c" stroke-width="2"/>
+  <text x="340" y="44" text-anchor="middle" fill="#e8f4ff" font-size="22" font-weight="700" font-family="Microsoft YaHei, PingFang SC, sans-serif">兵种三角克制 · 配比基准</text>
+  <text x="340" y="70" text-anchor="middle" fill="#7fa7bd" font-size="13" font-family="Microsoft YaHei, PingFang SC, sans-serif">箭头指向「被克制」的一方</text>
+
+  <g font-family="Microsoft YaHei, PingFang SC, sans-serif" text-anchor="middle">
+    <circle cx="340" cy="128" r="46" fill="#153b4e" stroke="#56c8e8" stroke-width="3"/>
+    <text x="340" y="125" fill="#e8f4ff" font-size="20" font-weight="700">盾兵</text>
+    <text x="340" y="147" fill="#8fc9dd" font-size="12">前排承伤</text>
+
+    <circle cx="150" cy="272" r="46" fill="#3a2a17" stroke="#f0c34a" stroke-width="3"/>
+    <text x="150" y="269" fill="#fff3d6" font-size="20" font-weight="700">矛兵</text>
+    <text x="150" y="291" fill="#d9bb80" font-size="12">突进切后排</text>
+
+    <circle cx="530" cy="272" r="46" fill="#2d1a3d" stroke="#b48cff" stroke-width="3"/>
+    <text x="530" y="269" fill="#f0e4ff" font-size="20" font-weight="700">弓兵</text>
+    <text x="530" y="291" fill="#c4a9e8" font-size="12">远程主输出</text>
+  </g>
+
+  <g stroke="#f0c34a" stroke-width="2.5" fill="none" marker-end="url(#arrow)">
+    <path d="M305,163 L185,235"/>
+    <path d="M196,272 L484,272"/>
+    <path d="M495,235 L375,163"/>
+  </g>
+  <g fill="#f0c34a" font-size="13" font-weight="700" font-family="Microsoft YaHei, PingFang SC, sans-serif" text-anchor="middle">
+    <text x="222" y="192">盾克矛</text>
+    <text x="340" y="262">矛克弓</text>
+    <text x="458" y="192">弓克盾</text>
+  </g>
+
+  <rect x="40" y="322" width="600" height="26" rx="8" fill="#122b38"/>
+  <text x="340" y="340" text-anchor="middle" fill="#9fd8e8" font-size="13" font-family="Microsoft YaHei, PingFang SC, sans-serif">常用配比：开荒 5:2:3 ｜ 打熊 1:2:7（弓兵充足时）｜ 防守 6:2:2</text>
+</svg>
