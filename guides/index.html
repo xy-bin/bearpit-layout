@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0a141e" />
+<title>游戏攻略库 · 永誓盟工具站</title>
+<link rel="stylesheet" href="styles.css?v=20261114a" />
+<link rel="stylesheet" href="../shared/topbar.css?v=20261106i" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">略</div>
+    <div class="brand-text">
+      <h1>游戏攻略库</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+  <div class="actions compact">
+    <div class="action-group">
+      <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+    </div>
+    <div class="action-group">
+      <button class="btn ghost" id="btnRefreshData" title="优先拉取云端实时攻略覆盖当前内容；云端为空时可载入内置示例（可撤销）">🔄 更新最新数据</button>
+      <button class="btn ghost" id="btnUndoRefresh" title="恢复到更新前的内容" hidden>↩ 撤销更新</button>
+    </div>
+    <div class="action-group">
+      <button class="btn primary" id="btnNew" title="写一篇新攻略（需管理员解锁）">＋ 新建攻略</button>
+    </div>
+    <div class="action-group cloud-group">
+      <span class="cloud-status" id="cloudStatus"></span>
+      <button class="btn ghost" id="btnPublish" title="把当前攻略立即发布到云端，所有盟友刷新即可看到">☁ 发布</button>
+      <button class="btn ghost" id="btnCloud" title="输入管理口令后，修改会实时同步到云端">🔒 管理员</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- ============ 列表视图 ============ -->
+  <section id="viewList">
+    <div class="card list-toolbar">
+      <div class="search-box">
+        <span>🔍</span>
+        <input id="inSearch" type="search" placeholder="搜索标题 / 正文 / 分类…" spellcheck="false" />
+      </div>
+      <div class="toolbar-right">
+        <button class="btn ghost mini" id="btnExportBak" title="把所有攻略导出为 JSON 备份文件">⬇ 导出备份</button>
+        <button class="btn ghost mini" id="btnImportBak" title="从 JSON 备份文件恢复攻略">⬆ 导入备份</button>
+        <button class="btn ghost mini del" id="btnClearAll" title="清空全部攻略（不可撤销，建议先导出备份）">🧹 清空全部</button>
+        <input type="file" id="fileImport" accept=".json,application/json" hidden />
+      </div>
+    </div>
+    <div class="cat-chips" id="catChips"></div>
+    <div class="list-meta"><span id="listCount"></span><span class="list-tip">点卡片阅读全文 · 未解锁时为只读</span></div>
+    <div class="post-grid" id="postGrid"></div>
+    <div class="empty" id="listEmpty" hidden>
+      <div class="empty-icon">📖</div>
+      <h3 id="emptyTitle">还没有攻略</h3>
+      <p id="emptyText">点顶栏「＋ 新建攻略」写第一篇；需要编辑权限请先点「🔒 管理员」解锁。</p>
+    </div>
+  </section>
+
+  <!-- ============ 详情视图 ============ -->
+  <section id="viewDetail" hidden>
+    <div class="detail-head">
+      <button class="btn ghost" id="btnBackList">← 返回列表</button>
+      <div class="detail-actions">
+        <button class="btn ghost" id="btnPin" title="置顶 / 取消置顶">📌 置顶</button>
+        <button class="btn ghost" id="btnEdit" title="编辑这篇攻略">✎ 编辑</button>
+        <button class="btn ghost del" id="btnDelete" title="删除这篇攻略">🗑 删除</button>
+      </div>
+    </div>
+    <article class="article">
+      <div class="article-meta">
+        <span class="cat-badge" id="dCat"></span>
+        <span id="dTime"></span>
+        <span id="dPin" class="pin-badge" hidden>📌 已置顶</span>
+      </div>
+      <h1 id="dTitle"></h1>
+      <div class="md-body" id="dBody"></div>
+    </article>
+  </section>
+
+  <!-- ============ 编辑视图 ============ -->
+  <section id="viewEditor" hidden>
+    <div class="edit-head">
+      <button class="btn ghost" id="btnCancel">← 取消</button>
+      <span class="edit-tip" id="editTip"></span>
+      <button class="btn primary" id="btnSave">💾 保存攻略</button>
+    </div>
+
+    <div class="card edit-meta">
+      <div class="add-row">
+        <label class="field grow">标题<input id="eTitle" type="text" maxlength="80" spellcheck="false" placeholder="如：火晶 5 阶段资源规划" /></label>
+        <label class="field">分类<input id="eCat" type="text" list="catList" maxlength="20" spellcheck="false" placeholder="如：养成心得" /></label>
+        <datalist id="catList"></datalist>
+        <label class="field grow">摘要（留空自动提取正文）<input id="eSummary" type="text" maxlength="160" spellcheck="false" /></label>
+      </div>
+    </div>
+
+    <div class="card editor-card">
+      <div class="card-title edit-title-row">
+        <span class="dot teal"></span><h3>正文（Markdown）</h3>
+        <div class="edit-tools" id="editTools">
+          <button class="md-tool" data-md="h2" type="button" title="二级标题">H2</button>
+          <button class="md-tool" data-md="h3" type="button" title="三级标题">H3</button>
+          <button class="md-tool" data-md="bold" type="button" title="粗体"><b>B</b></button>
+          <button class="md-tool" data-md="italic" type="button" title="斜体"><i>I</i></button>
+          <button class="md-tool" data-md="ul" type="button" title="无序列表">• 列表</button>
+          <button class="md-tool" data-md="ol" type="button" title="有序列表">1. 列表</button>
+          <button class="md-tool" data-md="quote" type="button" title="引用">❝ 引用</button>
+          <button class="md-tool" data-md="table" type="button" title="表格">▦ 表格</button>
+          <button class="md-tool" data-md="code" type="button" title="代码块">&lt;/&gt;</button>
+          <button class="md-tool" data-md="hr" type="button" title="分隔线">—</button>
+          <button class="md-tool accent" id="btnPickImg" type="button" title="选择或粘贴本地图片，自动压缩内嵌">🖼 插入图片</button>
+          <button class="md-tool" id="btnImgUrl" type="button" title="插入图片网址">🔗 图片网址</button>
+          <button class="md-tool" id="btnTogglePreview" type="button" title="显示 / 隐藏实时预览">👁 预览</button>
+        </div>
+      </div>
+
+      <div class="editor-split" id="editorSplit">
+        <textarea id="eBody" spellcheck="false" placeholder="# 在这里写攻略&#10;&#10;支持 **粗体**、- 列表、> 引用、表格、```代码块```、![说明](图片)&#10;也可以直接 Ctrl+V 粘贴截图，或点「🖼 插入图片」选本地文件。"></textarea>
+        <div class="md-body preview" id="ePreview"></div>
+      </div>
+
+      <div class="img-bar">
+        <span class="img-count">已内嵌图片 <b id="imgCount">0</b> 张</span>
+        <div class="img-thumbs" id="imgThumbs"></div>
+        <button class="btn ghost mini" id="btnCleanImgs" type="button" title="把正文里没有引用的内嵌图片清掉，减小体积">🧹 清理未引用</button>
+      </div>
+      <p class="hint">图片会自动压缩后内嵌，正文里用 <code>![](img:N)</code> 引用，点缩略图可再次插入、点 ✕ 可移除；外链图片直接写 <code>![](https://…)</code>。保存前建议点「👁 预览」核对排版。</p>
+    </div>
+    <input type="file" id="fileImg" accept="image/*" multiple hidden />
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>Markdown 图文攻略 · 分类 / 搜索 · 云端实时同步</span>
+  <span class="sign"><a href="../index.html" style="color:inherit;text-decoration:none">← 永誓盟 · 工具站</a></span>
+</footer>
+
+<div class="toast" id="toast" hidden></div>
+
+<link rel="stylesheet" href="../shared/cloud.css" />
+<script src="../shared/kv-store.js?v=20261106i"></script>
+<script src="markdown.js?v=20261114a"></script>
+<script src="default-data.js?v=20261114a"></script>
+<script src="app.js?v=20261114a"></script>
+</body>
+</html>
