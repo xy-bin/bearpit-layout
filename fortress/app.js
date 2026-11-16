@@ -166,19 +166,20 @@ const FORT_NAMES = [];
 for (let n = 1; n <= 12; n++) FORT_NAMES.push(n + ' 号堡垒');
 for (let n = 1; n <= 4; n++) FORT_NAMES.push(n + ' 号要塞');
 
-/* 游戏道具图标库（11 张，128×128 透明 PNG） */
+/* 游戏道具图标库（11 张，128×128 透明 PNG）
+   qty = 该道具品类在游戏内的固定奖励数量：数量跟品类走，换图标即换数量 */
 const REWARD_ITEMS = {
-  petBox:        { name: '宠物箱子', img: 'rewards/pet-box.png',        color: '#e8b93c' },
-  fireCrystal:   { name: '火晶',     img: 'rewards/fire-crystal.png',   color: '#e05555' },
-  equipBox:      { name: '装备箱子', img: 'rewards/equip-box.png',      color: '#708fae' },
-  heroShard:     { name: '英雄碎片', img: 'rewards/hero-shard.png',     color: '#e8b93c' },
-  petStone:      { name: '宠物石头', img: 'rewards/pet-stone.png',      color: '#8fb0cc' },
-  screw:         { name: '螺丝',     img: 'rewards/screw.png',          color: '#a970e8' },
-  boost:         { name: '通用加速', img: 'rewards/boost.png',          color: '#3f9ad8' },
-  penetratePill: { name: '穿透大药', img: 'rewards/penetrate-pill.png', color: '#e79a45' },
-  teleport:      { name: '高迁',     img: 'rewards/teleport.png',       color: '#bd84dd' },
-  hpPill:        { name: '生命大药', img: 'rewards/hp-pill.png',        color: '#38c870' },
-  marchPill:     { name: '出征大药', img: 'rewards/march-pill.png',     color: '#ffa05c' }
+  petBox:        { name: '宠物箱子', img: 'rewards/pet-box.png',        color: '#e8b93c', qty: '100' },
+  fireCrystal:   { name: '火晶',     img: 'rewards/fire-crystal.png',   color: '#e05555', qty: '600' },
+  equipBox:      { name: '装备箱子', img: 'rewards/equip-box.png',      color: '#708fae', qty: '150' },
+  heroShard:     { name: '英雄碎片', img: 'rewards/hero-shard.png',     color: '#e8b93c', qty: '420' },
+  petStone:      { name: '宠物石头', img: 'rewards/pet-stone.png',      color: '#8fb0cc', qty: '600' },
+  screw:         { name: '螺丝',     img: 'rewards/screw.png',          color: '#a970e8', qty: '500' },
+  boost:         { name: '通用加速', img: 'rewards/boost.png',          color: '#3f9ad8', qty: '400' },
+  penetratePill: { name: '穿透大药', img: 'rewards/penetrate-pill.png', color: '#e79a45', qty: '60'  },
+  teleport:      { name: '高迁',     img: 'rewards/teleport.png',       color: '#bd84dd', qty: '90'  },
+  hpPill:        { name: '生命大药', img: 'rewards/hp-pill.png',        color: '#38c870', qty: '60'  },
+  marchPill:     { name: '出征大药', img: 'rewards/march-pill.png',     color: '#ffa05c', qty: '60'  }
 };
 /* 导出图「奖励」列需要已解码的 Image；未加载完成时自动降级为纯数字胶囊 */
 const REWARD_IMG = {};
@@ -187,18 +188,18 @@ Object.keys(REWARD_ITEMS).forEach(k => {
   im.onload = () => { REWARD_IMG[k] = im; };
   im.src = REWARD_ITEMS[k].img;
 });
-/* 设施奖励默认映射（表格「奖励」列；导出图可通过列设置显示） */
+/* 设施奖励默认映射：只决定「该设施默认是什么道具品类」，数量/颜色由 REWARD_ITEMS 品类决定 */
 const FORT_REWARDS = (() => {
   const m = {};
-  const put = (key, item, qty, color) => { m[key] = { item, text: qty, color }; };
-  [1, 5, 9].forEach(n => put(n + '号堡垒', 'petStone', '600', '#8fb0cc'));
-  [2, 6, 10].forEach(n => put(n + '号堡垒', 'screw', '500', '#a970e8'));
-  [3, 7, 11].forEach(n => put(n + '号堡垒', 'boost', '400', '#3f9ad8'));
-  [4, 8, 12].forEach(n => put(n + '号堡垒', 'teleport', '90', '#bd84dd'));
-  put('1号要塞', 'heroShard', '420', '#e8b93c');
-  put('2号要塞', 'fireCrystal', '600', '#e05555');
-  put('3号要塞', 'equipBox', '150', '#708fae');
-  put('4号要塞', 'petBox', '100', '#e8b93c');
+  const put = (key, item) => { m[key] = item; };
+  [1, 5, 9].forEach(n => put(n + '号堡垒', 'hpPill'));
+  [2, 6, 10].forEach(n => put(n + '号堡垒', 'petStone'));
+  [3, 7, 11].forEach(n => put(n + '号堡垒', 'screw'));
+  [4, 8, 12].forEach(n => put(n + '号堡垒', 'boost'));
+  put('1号要塞', 'petBox');
+  put('2号要塞', 'heroShard');
+  put('3号要塞', 'fireCrystal');
+  put('4号要塞', 'equipBox');
   return m;
 })();
 
@@ -208,15 +209,17 @@ function rewardKey(s) {
     .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
     .replace(/號/g, '号').replace(/壘/g, '垒');
 }
-/* 用户自选覆盖优先：'' = 该行不显示奖励；未覆盖则用默认映射 */
+/* 用户自选覆盖优先：'' = 该行不显示奖励；未覆盖则用默认映射
+   数量与颜色一律来自道具品类 REWARD_ITEMS，换图标自动带出该品类的固定数量 */
 function rewardFor(name) {
   const key = rewardKey(name);
-  const base = FORT_REWARDS[key];
-  if (!base) return null;
-  if (!Object.prototype.hasOwnProperty.call(rewardOverrides, key)) return base;
-  const item = rewardOverrides[key];
-  if (!item || !REWARD_ITEMS[item]) return null;
-  return { item, text: base.text, color: REWARD_ITEMS[item].color, custom: true };
+  const defaultItem = FORT_REWARDS[key];
+  if (!defaultItem) return null;
+  let item = defaultItem;
+  if (Object.prototype.hasOwnProperty.call(rewardOverrides, key)) item = rewardOverrides[key];
+  const def = REWARD_ITEMS[item];
+  if (!def) return null;
+  return { item, text: def.qty, color: def.color, custom: item !== defaultItem };
 }
 
 /* 开启时间段：仅 5 个节点，可另选加 0~55 分钟（如 15:00 + 15分 = 15:15） */
