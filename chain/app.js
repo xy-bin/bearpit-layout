@@ -35,9 +35,20 @@
     var t = new Date(d.getTime() + 8 * 3600000);
     return t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()) + ' ' + pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes());
   }
-  function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch (e) { return ''; } }
+  function getPass() {
+    try {
+      var p = localStorage.getItem(PASS_KEY);
+      if (p) return p;
+      var old = sessionStorage.getItem(PASS_KEY);
+      if (old) { try { localStorage.setItem(PASS_KEY, old); } catch (e2) {} return old; }
+    } catch (e) {}
+    return '';
+  }
   function setPass(p) {
-    try { if (p) localStorage.setItem(PASS_KEY, p); else localStorage.removeItem(PASS_KEY); } catch (e) {}
+    try {
+      if (p) { localStorage.setItem(PASS_KEY, p); sessionStorage.setItem(PASS_KEY, p); }
+      else { localStorage.removeItem(PASS_KEY); sessionStorage.removeItem(PASS_KEY); }
+    } catch (e) {}
   }
   function toast(msg) {
     var t = $('toast'); t.textContent = msg; t.hidden = false;
@@ -98,6 +109,8 @@
         '<div class="act-card-meta">' + (a.fieldCount != null ? (a.fieldCount + ' 道题目 · ') : '') + 'ID：' + esc(a.id) + '</div>' +
         '<div class="act-card-ops"><button class="btn primary act-fill" data-act="' + esc(a.id) + '">📝 填写</button>' +
         '<button class="btn ghost act-manage" data-act="' + esc(a.id) + '">🛡 管理</button></div>' +
+        '<div class="act-card-ops sub"><button class="btn ghost mini act-copy" data-act="' + esc(a.id) + '" title="复制全部题目配置，生成一个新接龙（不复制名单）">📋 复制</button>' +
+        '<button class="btn danger mini act-delete" data-act="' + esc(a.id) + '" title="删除整个接龙及其全部名单，不可恢复">🗑 删除</button></div>' +
         '</div>';
     }).join('');
     grid.querySelectorAll('.act-fill').forEach(function (b) {
@@ -106,6 +119,70 @@
     grid.querySelectorAll('.act-manage').forEach(function (b) {
       b.addEventListener('click', function () { openAdmin(b.getAttribute('data-act')); });
     });
+    grid.querySelectorAll('.act-copy').forEach(function (b) {
+      b.addEventListener('click', function () { copyActDirect(b.getAttribute('data-act')); });
+    });
+    grid.querySelectorAll('.act-delete').forEach(function (b) {
+      b.addEventListener('click', function () { deleteActDirect(b.getAttribute('data-act')); });
+    });
+  }
+
+  /* 确保有可用管理口令：已登录（含首页/其它工具登录过）直接用，否则现场输入并校验 */
+  async function ensurePass() {
+    var p = getPass();
+    if (p) return p;
+    var input = (prompt('请输入管理口令后继续：') || '').trim();
+    if (!input) { toast('已取消'); return null; }
+    try {
+      await post('admin', { act: curAct || 'default', passcode: input });
+      setPass(input); adminUnlocked = true;
+      return input;
+    } catch (e) { toast('口令不正确'); return null; }
+  }
+  function passExpired(e) {
+    if (e && e.data && e.data.error === 'INVALID_PASSCODE') {
+      setPass(''); adminUnlocked = false; toast('口令已失效，请重新解锁'); return true;
+    }
+    return false;
+  }
+
+  /* 列表直接复制接龙：读取源配置 → 生成新 ID/标题 → 保存为新接龙（不复制名单） */
+  async function copyActDirect(id) {
+    var p = await ensurePass(); if (!p) return;
+    try {
+      var r = await api('config?' + actParam(id));
+      var src = r.config;
+      if (!src || !src.fields) { toast('读取源接龙配置失败'); return; }
+      var base = (src.id || id).replace(/_copy[0-9a-z]+$/, '');
+      var newId = (base + '_copy' + Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+      var payload = {
+        title: (src.title || id) + '（副本）',
+        notice: src.notice || '', deadline: src.deadline || '',
+        fields: src.fields.map(function (f) {
+          var o = { id: f.id, label: f.label || '未命名题目', type: f.type, required: !!f.required, placeholder: f.placeholder || '' };
+          if (f.type === 'radio' || f.type === 'checkbox') o.options = f.options || [];
+          if (f.type === 'number') { o.min = f.min || ''; o.max = f.max || ''; }
+          return o;
+        })
+      };
+      await post('config-save', { act: newId, passcode: p, config: payload });
+      await loadActs(); renderList();
+      toast('已复制为新接龙：' + payload.title);
+    } catch (e) { if (!passExpired(e)) toast('复制失败：' + e.message); }
+  }
+
+  /* 列表直接删除接龙：确认后删除配置 + 全部名单 + 索引 */
+  async function deleteActDirect(id) {
+    var p = await ensurePass(); if (!p) return;
+    var a = acts.find(function (x) { return x.id === id; });
+    var name = (a && a.title) || id;
+    if (!confirm('⚠️ 确定删除接龙「' + name + '」？该接龙的全部名单和配置将被永久删除，不可恢复。')) return;
+    try {
+      await post('delete-act', { act: id, passcode: p });
+      if (curAct === id) curAct = '';
+      await loadActs(); renderList();
+      toast('已删除接龙：' + name);
+    } catch (e) { if (!passExpired(e)) toast('删除失败：' + e.message); }
   }
 
   /* 视图切换：list 列表 / fill 填写 / admin 后台 */
@@ -116,7 +193,7 @@
     $('pageAdmin').hidden = view !== 'admin';
     $('btnBackList').hidden = view === 'list';
     $('btnCopyLink').hidden = view !== 'fill';
-    $('topAdminGroup').hidden = view !== 'fill';
+    $('topAdminGroup').hidden = true; /* 管理入口统一在列表卡片，填写页不再显示管理后台按钮 */
     window.scrollTo(0, 0);
   }
   function setUrl(view, act) {
@@ -139,12 +216,23 @@
     setUrl('admin', act);
     showView('admin');
     try { localStorage.setItem('chain.lastAct', act); } catch (e) {}
-    if (adminUnlocked && getPass()) {
-      await refreshAdmin(); fillConfigEditor();
-    } else {
-      $('adminPass').value = getPass();
-      $('lockCard').hidden = false; $('adminBody').hidden = true;
+    var p = getPass();
+    if (p) {
+      /* 首页 / 其它工具已用同一口令登录过：直接校验进入，不再要求重复解锁 */
+      try {
+        var r = await post('admin', { act: curAct, passcode: p });
+        adminUnlocked = true;
+        adminEntries = r.entries || [];
+        if (r.config) cfg = r.config;
+        if (r.acts && r.acts.length) acts = r.acts;
+        $('lockCard').hidden = true; $('adminBody').hidden = false;
+        renderAdmin(); fillConfigEditor();
+        return;
+      } catch (e) { setPass(''); } /* 口令已失效，落到解锁卡让重新输入 */
     }
+    adminUnlocked = false;
+    $('adminPass').value = '';
+    $('lockCard').hidden = false; $('adminBody').hidden = true;
   }
   function goList() {
     showView('list');

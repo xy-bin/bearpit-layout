@@ -107,7 +107,7 @@ async function handleChainApi(request, env, url) {
     return cj({ ok: true, config: cfg });
   }
 
-  /* 后台：删单条（cid）或清空（无 cid） */
+  /* 后台：删除单条（cid）或清空（无 cid） */
   if (p === '/api/chain/clear' && method === 'POST') {
     const b = await body();
     if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
@@ -115,6 +115,17 @@ async function handleChainApi(request, env, url) {
     const list = await env.KV_DATA.list({ prefix: SUB });
     await Promise.all(list.keys.map(k => env.KV_DATA.delete(k.name)));
     return cj({ ok: true, removed: list.keys.length });
+  }
+
+  /* 后台：删除整个接龙（配置 + 全部名单，并从活动索引移除） */
+  if (p === '/api/chain/delete-act' && method === 'POST') {
+    const b = await body();
+    if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
+    const list = await env.KV_DATA.list({ prefix: SUB });
+    await Promise.all([env.KV_DATA.delete(CFG)].concat(list.keys.map(k => env.KV_DATA.delete(k.name))));
+    const all = await allActs();
+    await env.KV_DATA.put(ACTS, JSON.stringify(all.filter(a => a.id !== act)));
+    return cj({ ok: true, removed: list.keys.length, act: act });
   }
 
   return cj({ error: 'CHAIN_NOT_FOUND' }, 404);

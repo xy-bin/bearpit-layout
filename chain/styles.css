@@ -104,6 +104,8 @@ select option { background: #122232; }
 .act-card-meta { font-size: 11.5px; color: var(--txt-dim); }
 .act-card-ops { display: flex; gap: 9px; margin-top: 6px; }
 .act-card-ops .btn { flex: 1; }
+.act-card-ops.sub { margin-top: 0; }
+.act-card-ops.sub .btn.mini { height: 30px; font-size: 12px; padding: 0 8px; }
 
 /* 填写表单 */
 .form-card { padding: 26px 28px; }
