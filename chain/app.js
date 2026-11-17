@@ -7,7 +7,7 @@
   var PASS_KEY = 'kv.admin.pass';
   var acts = [], curAct = '', cfg = null, myEntry = null;
   var adminEntries = [], adminUnlocked = false, curTab = 'data';
-  var drafts = {};
+  var drafts = {}, curView = 'list';
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -71,21 +71,85 @@
     return api(path + sep + actParam(act), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(obj) });
   }
 
-  /* ---------- 活动与表单 ---------- */
+  /* ---------- 活动列表 / 页面导航 ---------- */
   async function loadActs() {
     var remote = null;
     try { remote = (await api('acts')).acts; } catch (e) {}
     acts = (remote && remote.length) ? remote : (window.CHAIN_DEFAULT_ACTS || []).map(function (a) { return { id: a.id, title: a.title }; });
-    var urlAct = new URLSearchParams(location.search).get('act');
-    var saved = null; try { saved = localStorage.getItem('chain.lastAct'); } catch (e) {}
-    curAct = urlAct || saved || (acts[0] && acts[0].id) || 'default';
-    if (!acts.some(function (a) { return a.id === curAct; })) acts.push({ id: curAct, title: curAct });
-    renderActSelect();
   }
-  function renderActSelect() {
-    var sel = $('actSelect');
-    sel.innerHTML = acts.map(function (a) { return '<option value="' + esc(a.id) + '"' + (a.id === curAct ? ' selected' : '') + '>' + esc(a.title || a.id) + '</option>'; }).join('');
-    $('actMeta').innerHTML = '<span class="pill">共 ' + acts.length + ' 个接龙</span>';
+  function renderList() {
+    var grid = $('actGrid');
+    if (!acts.length) {
+      grid.innerHTML = '<div class="card empty">暂无接龙。进入管理后台「新建接龙」创建第一个。</div>';
+      $('listCountPill').textContent = '0 个接龙';
+      return;
+    }
+    $('listCountPill').textContent = '共 ' + acts.length + ' 个接龙';
+    grid.innerHTML = acts.map(function (a) {
+      var d = a.deadline ? new Date(a.deadline) : null;
+      var statusCls, statusTxt;
+      if (d && !isNaN(d.getTime())) {
+        if (d.getTime() <= Date.now()) { statusCls = 'passed'; statusTxt = '已截止 · ' + bjText(d); }
+        else { statusCls = 'live'; statusTxt = '进行中 · 截至 ' + bjText(d); }
+      } else { statusCls = 'open'; statusTxt = '长期开放'; }
+      return '<div class="card act-card" data-act="' + esc(a.id) + '">' +
+        '<div class="act-card-top"><span class="act-status ' + statusCls + '">' + esc(statusTxt) + '</span></div>' +
+        '<h3 class="act-card-title">' + esc(a.title || a.id) + '</h3>' +
+        '<div class="act-card-meta">' + (a.fieldCount != null ? (a.fieldCount + ' 道题目 · ') : '') + 'ID：' + esc(a.id) + '</div>' +
+        '<div class="act-card-ops"><button class="btn primary act-fill" data-act="' + esc(a.id) + '">📝 填写</button>' +
+        '<button class="btn ghost act-manage" data-act="' + esc(a.id) + '">🛡 管理</button></div>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('.act-fill').forEach(function (b) {
+      b.addEventListener('click', function () { openFill(b.getAttribute('data-act')); });
+    });
+    grid.querySelectorAll('.act-manage').forEach(function (b) {
+      b.addEventListener('click', function () { openAdmin(b.getAttribute('data-act')); });
+    });
+  }
+
+  /* 视图切换：list 列表 / fill 填写 / admin 后台 */
+  function showView(view) {
+    curView = view;
+    $('pageList').hidden = view !== 'list';
+    $('pageFill').hidden = view !== 'fill';
+    $('pageAdmin').hidden = view !== 'admin';
+    $('btnBackList').hidden = view === 'list';
+    $('btnCopyLink').hidden = view !== 'fill';
+    $('topAdminGroup').hidden = view !== 'fill';
+    window.scrollTo(0, 0);
+  }
+  function setUrl(view, act) {
+    var url = location.pathname;
+    if (view === 'list') {
+      history.replaceState(null, '', url);
+    } else {
+      history.replaceState(null, '', url + '?act=' + encodeURIComponent(act || curAct) + '&view=' + view);
+    }
+  }
+  async function openFill(act) {
+    curAct = act;
+    setUrl('fill', act);
+    showView('fill');
+    try { localStorage.setItem('chain.lastAct', act); } catch (e) {}
+    await loadConfig();
+  }
+  async function openAdmin(act) {
+    curAct = act;
+    setUrl('admin', act);
+    showView('admin');
+    try { localStorage.setItem('chain.lastAct', act); } catch (e) {}
+    if (adminUnlocked && getPass()) {
+      await refreshAdmin(); fillConfigEditor();
+    } else {
+      $('adminPass').value = getPass();
+      $('lockCard').hidden = false; $('adminBody').hidden = true;
+    }
+  }
+  function goList() {
+    showView('list');
+    setUrl('list');
+    renderList();
   }
   async function loadConfig() {
     var remote = null;
@@ -243,11 +307,6 @@
   }
 
   /* ---------- 后台 ---------- */
-  function showAdmin(on) {
-    $('pageFill').hidden = on;
-    $('pageAdmin').hidden = !on;
-    if (on && adminUnlocked) { $('lockCard').hidden = true; $('adminBody').hidden = false; }
-  }
   async function unlock() {
     var p = $('adminPass').value.trim();
     if (!p) { $('lockErr').textContent = '请输入口令'; $('lockErr').hidden = false; return; }
@@ -256,7 +315,7 @@
       var r = await post('admin', { act: curAct, passcode: p });
       setPass(p); adminUnlocked = true;
       adminEntries = r.entries || [];
-      if (r.acts && r.acts.length) { acts = r.acts; renderActSelect(); }
+      if (r.acts && r.acts.length) { acts = r.acts; renderList(); }
       if (r.config) cfg = r.config;
       $('lockCard').hidden = true; $('adminBody').hidden = false;
       renderAdmin(); fillConfigEditor();
@@ -506,7 +565,7 @@
       acts = acts.filter(function (a) { return a.id !== newId; });
       acts.push({ id: newId, title: payload.title });
       cfg = Object.assign({ id: newId }, payload);
-      renderActSelect(); fillConfigEditor(); renderDeadline();
+      renderList(); fillConfigEditor(); renderDeadline();
       $('cfgSavedHint').textContent = '✅ 已保存并发布 · ' + bj(new Date().toISOString(), false);
       toast('活动已保存并发布');
     }).catch(function (e) { toast('保存失败：' + e.message); })
@@ -542,28 +601,27 @@
 
   /* ---------- 事件绑定 ---------- */
   function bind() {
-    $('actSelect').addEventListener('change', function () {
-      curAct = this.value;
-      try { localStorage.setItem('chain.lastAct', curAct); } catch (e) {}
-      history.replaceState(null, '', location.pathname + '?act=' + encodeURIComponent(curAct));
-      loadConfig();
-      if (adminUnlocked) { refreshAdmin(); fillConfigEditor(); }
-    });
+    $('btnBackList').addEventListener('click', goList);
+    $('btnBackListAdmin').addEventListener('click', goList);
     $('btnDraft').addEventListener('click', saveDraft);
     $('fillForm').addEventListener('submit', function (e) { e.preventDefault(); submit(); });
     $('btnCopyLink').addEventListener('click', function () {
-      var url = location.origin + location.pathname + '?act=' + encodeURIComponent(curAct);
+      var url = location.origin + location.pathname + '?act=' + encodeURIComponent(curAct) + '&view=fill';
       if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast('填写链接已复制'); }).catch(function () { prompt('复制此链接：', url); });
       else prompt('复制此链接：', url);
     });
-    $('btnRefresh').addEventListener('click', function () { loadActs().then(loadConfig).then(function () { toast('已刷新'); }); });
-    $('btnAdmin').addEventListener('click', function () {
-      if (adminUnlocked) { showAdmin(true); }
-      else { $('adminPass').value = getPass(); showAdmin(true); }
+    $('btnRefresh').addEventListener('click', function () {
+      loadActs().then(function () {
+        if (curView === 'list') renderList();
+        else if (curView === 'admin') refreshAdmin();
+        else loadConfig();
+        toast('已刷新');
+      });
     });
+    $('btnAdmin').addEventListener('click', function () { openAdmin(curAct); });
     $('btnUnlock').addEventListener('click', unlock);
     $('adminPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
-    $('btnLock').addEventListener('click', function () { setPass(''); adminUnlocked = false; $('adminBody').hidden = true; $('lockCard').hidden = false; showAdmin(false); toast('已退出管理'); });
+    $('btnLock').addEventListener('click', function () { setPass(''); adminUnlocked = false; $('adminBody').hidden = true; $('lockCard').hidden = false; toast('已退出管理'); });
     document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.getAttribute('data-tab')); }); });
     $('btnExportCsv').addEventListener('click', exportCsv);
     $('searchBox').addEventListener('input', renderTable);
@@ -587,9 +645,18 @@
   async function init() {
     bind();
     await loadActs();
-    await loadConfig();
+    var params = new URLSearchParams(location.search);
+    var urlAct = params.get('act'), view = params.get('view');
+    if (urlAct && view !== 'list') {
+      /* 兼容旧链接：只有 act 没有 view 时，默认直达填写页 */
+      if (!acts.some(function (a) { return a.id === urlAct; })) acts.push({ id: urlAct, title: urlAct });
+      if (view === 'admin') await openAdmin(urlAct);
+      else await openFill(urlAct);
+    } else {
+      showView('list');
+      renderList();
+    }
     $('stats').textContent = '成员自助填写 · 隐私隔离 · 后台统计导出';
-    // 后台若已有解锁口令，进入后台页时自动恢复（不主动解锁，点后台按钮时用已存口令尝试）
   }
   init();
 })();

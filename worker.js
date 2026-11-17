@@ -46,7 +46,12 @@ async function handleChainApi(request, env, url) {
   async function upsertAct(id, cfg) {
     const list = await allActs();
     const i = list.findIndex(a => a.id === id);
-    const item = { id: id, title: (cfg && cfg.title) || id, updated_at: new Date().toISOString() };
+    const item = {
+      id: id, title: (cfg && cfg.title) || id,
+      deadline: (cfg && cfg.deadline) || '',
+      fieldCount: (cfg && Array.isArray(cfg.fields)) ? cfg.fields.length : 0,
+      updated_at: new Date().toISOString()
+    };
     if (i >= 0) list[i] = item; else list.push(item);
     await env.KV_DATA.put(ACTS, JSON.stringify(list));
     return list;

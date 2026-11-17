@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#0a141e" />
 <title>接龙收集 · 无尽冬日工具站</title>
-<link rel="stylesheet" href="styles.css?v=20261117b" />
+<link rel="stylesheet" href="styles.css?v=20261117c" />
 <link rel="stylesheet" href="../shared/topbar.css?v=20261106i" />
 </head>
 <body>
@@ -22,27 +22,30 @@
     <div class="action-group">
       <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
     </div>
-    <div class="action-group">
+    <div class="action-group" id="topActions">
+      <button class="btn ghost" id="btnBackList" title="返回接龙列表">← 接龙列表</button>
       <button class="btn ghost" id="btnCopyLink" title="复制当前接龙的填写链接，发给成员">🔗 复制填写链接</button>
       <button class="btn ghost" id="btnRefresh" title="重新拉取云端最新数据">🔄 刷新</button>
     </div>
-    <div class="action-group cloud-group">
+    <div class="action-group cloud-group" id="topAdminGroup">
       <button class="btn primary" id="btnAdmin" title="管理员解锁后查看统计、导出、配置">🛡 管理后台</button>
     </div>
   </div>
 </header>
 
-<main class="page" id="pageFill">
-  <!-- 活动切换条 -->
-  <div class="actbar card">
-    <div class="actbar-left">
-      <label class="field">当前接龙
-        <select id="actSelect"></select>
-      </label>
+<!-- 接龙列表（首页） -->
+<main class="page" id="pageList">
+  <div class="card list-intro">
+    <div>
+      <h2>接龙列表</h2>
+      <p>选择一个接龙参与填写，或进入管理后台查看统计与配置。</p>
     </div>
-    <div class="actbar-right" id="actMeta"></div>
+    <span class="pill" id="listCountPill">—</span>
   </div>
+  <div id="actGrid" class="act-grid"></div>
+</main>
 
+<main class="page" id="pageFill" hidden>
   <!-- 填写卡片 -->
   <form class="card form-card" id="fillForm" autocomplete="off">
     <div class="form-head">
@@ -82,6 +85,7 @@
         <button class="tab" data-tab="config">⚙️ 活动配置</button>
       </div>
       <div class="admin-ops">
+        <button class="btn ghost" id="btnBackListAdmin" title="返回接龙列表">← 接龙列表</button>
         <button class="btn ghost" id="btnExportCsv">⬇ 导出 CSV</button>
         <button class="btn ghost" id="btnLock">🔒 退出管理</button>
       </div>
@@ -149,7 +153,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="default-data.js?v=20261117b"></script>
-<script src="app.js?v=20261117b"></script>
+<script src="default-data.js?v=20261117c"></script>
+<script src="app.js?v=20261117c"></script>
 </body>
 </html>
