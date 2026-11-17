@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0a141e" />
+<title>接龙收集 · 无尽冬日工具站</title>
+<link rel="stylesheet" href="styles.css?v=20261117a" />
+<link rel="stylesheet" href="../shared/topbar.css?v=20261106i" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">接</div>
+    <div class="brand-text">
+      <h1>接龙收集</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+  <div class="actions compact">
+    <div class="action-group">
+      <a class="btn ghost" href="../index.html" style="text-decoration:none">🏠 返回首页</a>
+    </div>
+    <div class="action-group">
+      <button class="btn ghost" id="btnCopyLink" title="复制当前接龙的填写链接，发给成员">🔗 复制填写链接</button>
+      <button class="btn ghost" id="btnRefresh" title="重新拉取云端最新数据">🔄 刷新</button>
+    </div>
+    <div class="action-group cloud-group">
+      <button class="btn primary" id="btnAdmin" title="管理员解锁后查看统计、导出、配置">🛡 管理后台</button>
+    </div>
+  </div>
+</header>
+
+<main class="page" id="pageFill">
+  <!-- 活动切换条 -->
+  <div class="actbar card">
+    <div class="actbar-left">
+      <label class="field">当前接龙
+        <select id="actSelect"></select>
+      </label>
+    </div>
+    <div class="actbar-right" id="actMeta"></div>
+  </div>
+
+  <!-- 填写卡片 -->
+  <form class="card form-card" id="fillForm" autocomplete="off">
+    <div class="form-head">
+      <h2 id="formTitle">接龙收集</h2>
+      <p id="formNotice" class="notice-bar" hidden></p>
+    </div>
+    <div id="fields" class="fields"></div>
+    <div id="myStatus" class="my-status" hidden></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" id="btnDraft">保存草稿</button>
+      <button type="submit" class="btn primary big" id="btnSubmit">提交</button>
+    </div>
+    <p class="privacy-note">🔒 你填写的内容不会展示给其他成员，仅发布人在后台可见；再次打开可修改自己的这条。</p>
+  </form>
+</main>
+
+<!-- 管理后台 -->
+<main class="page" id="pageAdmin" hidden>
+  <!-- 解锁卡 -->
+  <div class="card lock-card" id="lockCard">
+    <div class="lock-icon">🛡</div>
+    <h2>管理后台</h2>
+    <p>输入管理口令解锁，查看接龙名单与统计、导出表格、配置题目。</p>
+    <div class="lock-row">
+      <input type="password" id="adminPass" placeholder="管理口令" />
+      <button class="btn primary" id="btnUnlock">解锁</button>
+    </div>
+    <p class="err" id="lockErr" hidden></p>
+  </div>
+
+  <div id="adminBody" hidden>
+    <!-- 后台工具条 -->
+    <div class="card admin-toolbar">
+      <div class="tabs">
+        <button class="tab active" data-tab="data">📋 名单与统计</button>
+        <button class="tab" data-tab="config">⚙️ 活动配置</button>
+      </div>
+      <div class="admin-ops">
+        <button class="btn ghost" id="btnExportCsv">⬇ 导出 CSV</button>
+        <button class="btn ghost" id="btnLock">🔒 退出管理</button>
+      </div>
+    </div>
+
+    <!-- 名单与统计 -->
+    <section id="tabData">
+      <div class="stat-row" id="statRow"></div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot teal"></span><h3>选项分布</h3></div>
+        <div id="distribution" class="distribution"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="dot gold"></span><h3>接龙名单</h3>
+          <span class="list-count" id="listCount"></span>
+        </div>
+        <div class="filter-row">
+          <input id="searchBox" type="text" placeholder="搜索昵称 / 任意内容…" />
+          <select id="filterField"></select>
+          <select id="filterValue"></select>
+          <button class="btn ghost" id="btnClearFilter">清除筛选</button>
+          <button class="btn danger" id="btnClearAll">清空名单</button>
+        </div>
+        <div class="table-wrap">
+          <table id="entryTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 活动配置 -->
+    <section id="tabConfig" hidden>
+      <div class="card">
+        <div class="card-title"><span class="dot teal"></span><h3>活动信息</h3></div>
+        <div class="cfg-row">
+          <label class="field grow">活动名称<input id="cfgTitle" type="text" placeholder="如：VOE雪域联赛参战统计" /></label>
+          <label class="field grow">隐私提示语<input id="cfgNotice" type="text" placeholder="如：填写内容不会展示给其他人" /></label>
+        </div>
+        <label class="field">活动 ID（英文/数字，用于区分不同接龙）<input id="cfgActId" type="text" placeholder="如：voe2026" /></label>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot gold"></span><h3>题目设置</h3></div>
+        <div id="fieldEditor" class="field-editor"></div>
+        <button class="btn ghost" id="btnAddField">＋ 添加题目</button>
+      </div>
+
+      <div class="card cfg-save-row">
+        <button class="btn primary" id="btnSaveConfig">保存并发布活动</button>
+        <span class="hint" id="cfgSavedHint"></span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="default-data.js?v=20261117a"></script>
+<script src="app.js?v=20261117a"></script>
+</body>
+</html>

@@ -18,6 +18,98 @@ function validKey(k) {
   return typeof k === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(k);
 }
 
+/* ============ 接龙（收集表）专用接口 ============
+   - 成员匿名提交：每人一条独立 KV key（csub:<act>:<cid>），互不覆盖
+   - 成员仅能读自己那条（按 cid 隔离），后台需口令才能看全量
+   - 口令校验复用 ADMIN_HASH，Worker 内不另存任何口令明文 */
+async function handleChainApi(request, env, url) {
+  const p = url.pathname, q = url.searchParams;
+  const act = (q.get('act') || 'default').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || 'default';
+  const CFG = 'ccfg:' + act, SUB = 'csub:' + act + ':', ACTS = 'cacts';
+  const method = request.method;
+  function cj(obj, status) {
+    return new Response(JSON.stringify(obj), {
+      status: status || 200,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
+    });
+  }
+  async function body() { try { return await request.json(); } catch (e) { return {}; } }
+  function cidOf(v) { return String(v || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); }
+  async function adminOk(pass) { return typeof pass === 'string' && (await sha256hex('wbs1:' + pass)) === ADMIN_HASH; }
+  async function config() { return (await env.KV_DATA.get(CFG, 'json')) || null; }
+  async function allEntries() {
+    const list = await env.KV_DATA.list({ prefix: SUB });
+    const rows = await Promise.all(list.keys.map(k => env.KV_DATA.get(k.name, 'json')));
+    return rows.filter(Boolean).sort((a, b) => String(a.submittedAt || '').localeCompare(String(b.submittedAt || '')));
+  }
+  async function allActs() { return (await env.KV_DATA.get(ACTS, 'json')) || []; }
+  async function upsertAct(id, cfg) {
+    const list = await allActs();
+    const i = list.findIndex(a => a.id === id);
+    const item = { id: id, title: (cfg && cfg.title) || id, updated_at: new Date().toISOString() };
+    if (i >= 0) list[i] = item; else list.push(item);
+    await env.KV_DATA.put(ACTS, JSON.stringify(list));
+    return list;
+  }
+
+  /* 公开：活动列表（成员切换 / 后台复制填写链接用） */
+  if (p === '/api/chain/acts' && method === 'GET') return cj({ acts: await allActs() });
+
+  /* 公开：活动配置（成员渲染表单用） */
+  if (p === '/api/chain/config' && method === 'GET') return cj({ config: await config() });
+
+  /* 公开：成员读自己那条（cid 隔离，拿不到别人的） */
+  if (p === '/api/chain/mine' && method === 'GET') {
+    const cid = cidOf(q.get('cid'));
+    return cj({ entry: cid ? (await env.KV_DATA.get(SUB + cid, 'json')) : null });
+  }
+
+  /* 公开：成员提交/更新自己那条（无需口令） */
+  if (p === '/api/chain/submit' && method === 'POST') {
+    const b = await body(), cid = cidOf(b.cid);
+    if (!cid) return cj({ error: 'NO_CID' }, 400);
+    const old = await env.KV_DATA.get(SUB + cid, 'json');
+    const entry = {
+      id: (old && old.id) || cid, cid: cid,
+      data: (b.data && typeof b.data === 'object') ? b.data : {},
+      submittedAt: (old && old.submittedAt) || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await env.KV_DATA.put(SUB + cid, JSON.stringify(entry));
+    return cj({ ok: true, entry });
+  }
+
+  /* 后台：口令解锁后读全部（配置 + 名单） */
+  if (p === '/api/chain/admin' && method === 'POST') {
+    const b = await body();
+    if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
+    return cj({ ok: true, config: await config(), entries: await allEntries(), acts: await allActs(), updated_at: new Date().toISOString() });
+  }
+
+  /* 后台：保存活动配置 */
+  if (p === '/api/chain/config-save' && method === 'POST') {
+    const b = await body();
+    if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
+    if (!b.config || typeof b.config !== 'object') return cj({ error: 'BAD_CONFIG' }, 400);
+    const cfg = Object.assign({}, b.config, { updated_at: new Date().toISOString() });
+    await env.KV_DATA.put(CFG, JSON.stringify(cfg));
+    await upsertAct(act, cfg);
+    return cj({ ok: true, config: cfg });
+  }
+
+  /* 后台：删单条（cid）或清空（无 cid） */
+  if (p === '/api/chain/clear' && method === 'POST') {
+    const b = await body();
+    if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
+    if (b.cid) { await env.KV_DATA.delete(SUB + cidOf(b.cid)); return cj({ ok: true, removed: 1 }); }
+    const list = await env.KV_DATA.list({ prefix: SUB });
+    await Promise.all(list.keys.map(k => env.KV_DATA.delete(k.name)));
+    return cj({ ok: true, removed: list.keys.length });
+  }
+
+  return cj({ error: 'CHAIN_NOT_FOUND' }, 404);
+}
+
 async function handleApi(request, env) {
   const url = new URL(request.url);
   if (url.pathname !== '/api/data') return json({ error: 'NOT_FOUND' }, 404);
@@ -60,7 +152,8 @@ async function handleApi(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) return handleApi(request, env);
+    if (url.pathname.startsWith('/api/chain/')) return handleChainApi(request, env, url);
+  if (url.pathname.startsWith('/api/')) return handleApi(request, env);
     const res = await env.ASSETS.fetch(request);
     /* 若请求经过 Worker，强制 HTML/JS/CSS 每次回源校验，避免部署后仍拿到旧版 */
     if (res.body && res.status !== 304 && /\.(html?|js|css)$/i.test(url.pathname)) {
