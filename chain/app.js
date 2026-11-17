@@ -15,6 +15,26 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  /* 填空类字段（文本 / 多行 / 数字）统一走 input，值为单个字符串 */
+  function isTextLike(f) { return !!f && (f.type === 'text' || f.type === 'textarea' || f.type === 'number'); }
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  /* datetime-local（北京时间墙上时间）→ UTC ISO，避免浏览器时区差异 */
+  function bjLocalToISO(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || '');
+    if (!m) return '';
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - 8 * 3600000).toISOString();
+  }
+  /* UTC ISO → datetime-local（北京时间墙上时间） */
+  function isoToBjLocal(iso) {
+    if (!iso) return '';
+    var d = new Date(iso); if (isNaN(d.getTime())) return '';
+    var t = new Date(d.getTime() + 8 * 3600000);
+    return t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()) + 'T' + pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes());
+  }
+  function bjText(d) {
+    var t = new Date(d.getTime() + 8 * 3600000);
+    return t.getUTCFullYear() + '-' + pad2(t.getUTCMonth() + 1) + '-' + pad2(t.getUTCDate()) + ' ' + pad2(t.getUTCHours()) + ':' + pad2(t.getUTCMinutes());
+  }
   function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch (e) { return ''; } }
   function setPass(p) {
     try { if (p) localStorage.setItem(PASS_KEY, p); else localStorage.removeItem(PASS_KEY); } catch (e) {}
@@ -84,10 +104,18 @@
     var box = $('fields');
     box.innerHTML = cfg.fields.map(function (f, i) {
       var req = f.required ? '<span class="req">*</span>' : '';
-      var tag = f.type === 'checkbox' ? '可多选' : f.type === 'radio' ? '单选' : '填空';
+      var tag = f.type === 'checkbox' ? '可多选' : f.type === 'radio' ? '单选' : f.type === 'number' ? '数字' : '填空';
       var ctrl = '';
-      if (f.type === 'text' || f.type === 'textarea') {
-        ctrl = '<input class="q-input" type="text" data-fid="' + esc(f.id) + '" placeholder="' + esc(f.placeholder || '') + '" />';
+      if (isTextLike(f)) {
+        var attrs = ' class="q-input" data-fid="' + esc(f.id) + '" placeholder="' + esc(f.placeholder || '') + '"';
+        if (f.type === 'number') {
+          attrs += ' type="number" inputmode="decimal" step="any"';
+          if (f.min !== undefined && f.min !== '') attrs += ' min="' + esc(f.min) + '"';
+          if (f.max !== undefined && f.max !== '') attrs += ' max="' + esc(f.max) + '"';
+        } else {
+          attrs += ' type="text"';
+        }
+        ctrl = '<input' + attrs + ' />';
       } else {
         var opts = (f.options || []).map(function (o, oi) {
           var input = '<input type="' + (f.type === 'radio' ? 'radio' : 'checkbox') + '" name="f_' + esc(f.id) + '" value="' + esc(o) + '" data-fid="' + esc(f.id) + '" />';
@@ -106,11 +134,37 @@
       });
     });
     applyDraft();
+    renderDeadline();
   }
+
+  /* 截止日期：成员端提示 + 禁止提交（服务端同样校验） */
+  function renderDeadline() {
+    var bar = $('deadlineBar'), btn = $('btnSubmit');
+    var d = deadlineDate();
+    if (!d) { bar.hidden = true; btn.disabled = false; return; }
+    var passed = d.getTime() <= Date.now();
+    bar.hidden = false;
+    bar.classList.toggle('passed', passed);
+    if (passed) {
+      bar.textContent = '⛔ 本接龙已于 ' + bjText(d) + '（北京时间）截止，已停止接收提交';
+      btn.disabled = true;
+    } else {
+      var ms = d.getTime() - Date.now();
+      var left = ms >= 86400000 ? Math.ceil(ms / 86400000) + ' 天' : ms >= 3600000 ? Math.ceil(ms / 3600000) + ' 小时' : Math.max(1, Math.ceil(ms / 60000)) + ' 分钟';
+      bar.textContent = '⏰ 截止：' + bjText(d) + '（北京时间）· 剩余 ' + left;
+      btn.disabled = false;
+    }
+  }
+  function deadlineDate() {
+    if (!cfg || !cfg.deadline) return null;
+    var d = new Date(cfg.deadline);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   function readForm() {
     var data = {};
     cfg.fields.forEach(function (f) {
-      if (f.type === 'text' || f.type === 'textarea') {
+      if (isTextLike(f)) {
         var inp = document.querySelector('[data-fid="' + f.id + '"].q-input');
         data[f.id] = inp ? inp.value.trim() : '';
       } else if (f.type === 'radio') {
@@ -127,7 +181,7 @@
     if (!data) return;
     cfg.fields.forEach(function (f) {
       var v = data[f.id];
-      if (f.type === 'text' || f.type === 'textarea') {
+      if (isTextLike(f)) {
         var inp = document.querySelector('[data-fid="' + f.id + '"].q-input');
         if (inp) inp.value = v || '';
       } else {
@@ -150,6 +204,12 @@
       var f = cfg.fields[i], v = data[f.id];
       var empty = (f.type === 'checkbox') ? (!Array.isArray(v) || !v.length) : !v;
       if (f.required && empty) { toast('请填写：' + f.label); return false; }
+      if (f.type === 'number' && !empty) {
+        var n = Number(v);
+        if (!isFinite(n)) { toast(f.label + ' 需填写数字'); return false; }
+        if (f.min !== undefined && f.min !== '' && n < Number(f.min)) { toast(f.label + ' 不能小于 ' + f.min); return false; }
+        if (f.max !== undefined && f.max !== '' && n > Number(f.max)) { toast(f.label + ' 不能大于 ' + f.max); return false; }
+      }
     }
     return true;
   }
@@ -175,8 +235,11 @@
       try { localStorage.removeItem(draftKey()); } catch (e) {}
       toast('提交成功，感谢参与！');
       await loadMyEntry();
-    } catch (e) { toast('提交失败：' + e.message); }
-    btn.disabled = false; btn.textContent = '提交';
+    } catch (e) {
+      var errCode = e.data && e.data.error;
+      toast(errCode === 'DEADLINE_PASSED' ? '⛔ 本接龙已截止，无法提交' : ('提交失败：' + e.message));
+    }
+    btn.textContent = '提交'; renderDeadline();
   }
 
   /* ---------- 后台 ---------- */
@@ -245,7 +308,7 @@
     var box = $('distribution');
     var parts = [];
     cfg.fields.forEach(function (f) {
-      if (f.type === 'text' || f.type === 'textarea' || !f.options || !f.options.length) return;
+      if (isTextLike(f) || !f.options || !f.options.length) return;
       var counts = {};
       f.options.forEach(function (o) { counts[o] = 0; });
       adminEntries.forEach(function (e) {
@@ -262,7 +325,7 @@
     });
     // 填空题：列出前若干条文本
     cfg.fields.forEach(function (f) {
-      if (f.type !== 'text' && f.type !== 'textarea') return;
+      if (!isTextLike(f)) return;
       var vals = adminEntries.map(function (e) { return e.data && e.data[f.id]; }).filter(Boolean);
       if (!vals.length) return;
       parts.push('<div class="dist-q"><div class="dist-q-title">' + esc(f.label) + '（已填 ' + vals.length + ' 人）</div><div class="dist-row"><div class="dist-name"></div><div class="dist-val" style="width:auto;text-align:left">' + esc(vals.slice(0, 12).join('、')) + (vals.length > 12 ? ' …' : '') + '</div></div></div>');
@@ -351,26 +414,36 @@
     $('cfgTitle').value = cfg.title || '';
     $('cfgNotice').value = cfg.notice || '';
     $('cfgActId').value = cfg.id || curAct;
+    $('cfgDeadline').value = isoToBjLocal(cfg.deadline);
     renderFieldEditor();
   }
   function renderFieldEditor() {
     var box = $('fieldEditor');
     box.innerHTML = cfg.fields.map(function (f, i) {
       var typeSel = '<select class="fe-type" data-i="' + i + '">' +
-        [['text', '填空'], ['radio', '单选'], ['checkbox', '多选']].map(function (t) {
+        [['text', '填空'], ['number', '数字'], ['radio', '单选'], ['checkbox', '多选']].map(function (t) {
           return '<option value="' + t[0] + '"' + (f.type === t[0] ? ' selected' : '') + '>' + t[1] + '</option>';
         }).join('') + '</select>';
       var opts = '';
-      if (f.type !== 'text') {
+      if (f.type === 'radio' || f.type === 'checkbox') {
         var chips = (f.options || []).map(function (o, oi) {
           return '<span class="opt-chip">' + esc(o) + '<span class="x" data-i="' + i + '" data-oi="' + oi + '">×</span></span>';
         }).join('');
         opts = '<div class="fe-opts">' + chips + '<input class="new-opt" data-i="' + i + '" placeholder="输入选项后回车" />' +
           '<span class="hint">回车添加选项</span></div>';
       }
+      var extra = '';
+      if (isTextLike(f)) {
+        extra = '<div class="fe-extras"><label class="fe-extra">提示文字<input type="text" class="fe-placeholder" data-i="' + i + '" value="' + esc(f.placeholder || '') + '" placeholder="如：请输入游戏昵称" /></label>';
+        if (f.type === 'number') {
+          extra += '<label class="fe-extra short">最小值<input type="number" class="fe-min" data-i="' + i + '" value="' + esc(f.min == null ? '' : f.min) + '" placeholder="不限" /></label>' +
+            '<label class="fe-extra short">最大值<input type="number" class="fe-max" data-i="' + i + '" value="' + esc(f.max == null ? '' : f.max) + '" placeholder="不限" /></label>';
+        }
+        extra += '</div>';
+      }
       return '<div class="fe-item"><div class="fe-head"><span class="fe-num">Q' + (i + 1) + '</span>' +
         '<input type="text" class="fe-label" data-i="' + i + '" value="' + esc(f.label) + '" placeholder="题目标题" />' +
-        typeSel + '<span class="fe-del" data-i="' + i + '">删除</span></div>' + opts +
+        typeSel + '<span class="fe-del" data-i="' + i + '">删除</span></div>' + opts + extra +
         '<label class="fe-check"><input type="checkbox" class="fe-req" data-i="' + i + '"' + (f.required ? ' checked' : '') + ' />必填</label></div>';
     }).join('');
 
@@ -381,8 +454,14 @@
       el.addEventListener('change', function () {
         var f = cfg.fields[+el.dataset.i];
         f.type = el.value;
-        if (!f.options || !f.options.length) f.options = ['选项1', '选项2'];
+        if ((f.type === 'radio' || f.type === 'checkbox') && (!f.options || !f.options.length)) f.options = ['选项1', '选项2'];
+        if (isTextLike(f) && f.placeholder === undefined) f.placeholder = '';
         renderFieldEditor();
+      });
+    });
+    ['placeholder', 'min', 'max'].forEach(function (prop) {
+      box.querySelectorAll('.fe-' + prop).forEach(function (el) {
+        el.addEventListener('input', function () { cfg.fields[+el.dataset.i][prop] = el.value.trim(); });
       });
     });
     box.querySelectorAll('.fe-req').forEach(function (el) {
@@ -406,13 +485,16 @@
   function saveConfig() {
     var newId = ($('cfgActId').value || '').trim().replace(/[^A-Za-z0-9_-]/g, '');
     if (!newId) { toast('请填写合法的活动 ID'); return; }
+    var dl = ($('cfgDeadline').value || '').trim();
     var payload = {
       title: $('cfgTitle').value.trim() || newId,
       notice: $('cfgNotice').value.trim(),
+      deadline: bjLocalToISO(dl),
       fields: cfg.fields.map(function (f) {
         var o = { id: f.id, label: f.label || '未命名题目', type: f.type, required: !!f.required };
-        if (f.type !== 'text') o.options = f.options || [];
         o.placeholder = f.placeholder || '';
+        if (f.type === 'radio' || f.type === 'checkbox') o.options = f.options || [];
+        if (f.type === 'number') { o.min = f.min || ''; o.max = f.max || ''; }
         return o;
       })
     };
@@ -424,11 +506,38 @@
       acts = acts.filter(function (a) { return a.id !== newId; });
       acts.push({ id: newId, title: payload.title });
       cfg = Object.assign({ id: newId }, payload);
-      renderActSelect(); fillConfigEditor();
+      renderActSelect(); fillConfigEditor(); renderDeadline();
       $('cfgSavedHint').textContent = '✅ 已保存并发布 · ' + bj(new Date().toISOString(), false);
       toast('活动已保存并发布');
     }).catch(function (e) { toast('保存失败：' + e.message); })
       .finally(function () { btn.disabled = false; });
+  }
+
+  /* 新建空白接龙：生成新 ID 与一份示例题目，保存后即成为独立接龙 */
+  function newActivity() {
+    var stamp = Date.now().toString(36);
+    $('cfgActId').value = 'act' + stamp;
+    $('cfgTitle').value = '新接龙 ' + bj(new Date().toISOString(), false).slice(5, 10);
+    $('cfgNotice').value = '发布人已设置填写的内容不会被其他人查看，保护隐私';
+    $('cfgDeadline').value = '';
+    cfg.fields = [{ id: 'f' + stamp, label: '游戏昵称', type: 'text', required: true, placeholder: '请输入游戏昵称' }];
+    renderFieldEditor();
+    $('cfgSavedHint').textContent = '🆕 新接龙草稿，请修改题目后点「保存并发布活动」';
+    toast('已新建空白接龙草稿');
+    $('cfgTitle').focus(); $('cfgTitle').select();
+  }
+
+  /* 复制当前接龙为新活动：沿用全部题目配置（含编辑器里的未保存修改），但不复制已提交名单 */
+  function copyActivity() {
+    if (!cfg || !cfg.fields) { toast('请先加载活动配置'); return; }
+    var base = (cfg.id || curAct).replace(/_copy[0-9a-z]+$/, '');
+    var newId = (base + '_copy' + Date.now().toString(36)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+    var curTitle = $('cfgTitle').value.trim() || cfg.title || curAct;
+    $('cfgActId').value = newId;
+    $('cfgTitle').value = curTitle + '（副本）';
+    $('cfgSavedHint').textContent = '📋 已复制配置，请确认名称/ID/截止日期后点「保存并发布活动」（名单不复制）';
+    toast('已复制为新接龙草稿，保存后生效');
+    $('cfgTitle').focus(); $('cfgTitle').select();
   }
 
   /* ---------- 事件绑定 ---------- */
@@ -470,6 +579,8 @@
       cfg.fields.push({ id: 'f' + (Date.now().toString(36)), label: '新题目', type: 'text', required: false, placeholder: '' });
       renderFieldEditor();
     });
+    $('btnCopyAct').addEventListener('click', copyActivity);
+    $('btnNewAct').addEventListener('click', newActivity);
     $('btnSaveConfig').addEventListener('click', saveConfig);
   }
 

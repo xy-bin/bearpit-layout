@@ -64,10 +64,14 @@ async function handleChainApi(request, env, url) {
     return cj({ entry: cid ? (await env.KV_DATA.get(SUB + cid, 'json')) : null });
   }
 
-  /* 公开：成员提交/更新自己那条（无需口令） */
+  /* 公开：成员提交/更新自己那条（无需口令；截止日期后拒绝，防绕过前端） */
   if (p === '/api/chain/submit' && method === 'POST') {
     const b = await body(), cid = cidOf(b.cid);
     if (!cid) return cj({ error: 'NO_CID' }, 400);
+    const curCfg = await config();
+    if (curCfg && curCfg.deadline && new Date(curCfg.deadline).getTime() <= Date.now()) {
+      return cj({ error: 'DEADLINE_PASSED', deadline: curCfg.deadline }, 403);
+    }
     const old = await env.KV_DATA.get(SUB + cid, 'json');
     const entry = {
       id: (old && old.id) || cid, cid: cid,
@@ -92,6 +96,7 @@ async function handleChainApi(request, env, url) {
     if (!(await adminOk(b.passcode))) return cj({ error: 'INVALID_PASSCODE' }, 403);
     if (!b.config || typeof b.config !== 'object') return cj({ error: 'BAD_CONFIG' }, 400);
     const cfg = Object.assign({}, b.config, { updated_at: new Date().toISOString() });
+    if (cfg.deadline && isNaN(new Date(cfg.deadline).getTime())) delete cfg.deadline;
     await env.KV_DATA.put(CFG, JSON.stringify(cfg));
     await upsertAct(act, cfg);
     return cj({ ok: true, config: cfg });

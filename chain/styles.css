@@ -181,7 +181,8 @@ td .del-row:hover { text-decoration: underline; }
 .fe-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .fe-head .fe-num { font-size: 12px; color: var(--teal); font-weight: 700; }
 .fe-head .fe-num { flex-shrink: 0; }
-.fe-head input[type=text] { flex: 1; }
+.fe-head input[type=text] { flex: 1; background: rgba(4,14,24,.55); border: 1px solid rgba(120,170,195,.22); border-radius: 7px; color: var(--txt); padding: 8px 10px; font-size: 13px; outline: none; font-family: inherit; }
+.fe-head input[type=text]:focus { border-color: rgba(86,200,232,.6); }
 .fe-head select { width: 110px; }
 .fe-head .fe-del { color: var(--red); cursor: pointer; font-size: 12px; padding: 4px 8px; }
 .fe-opts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -194,6 +195,29 @@ td .del-row:hover { text-decoration: underline; }
 .fe-check input { accent-color: var(--teal); }
 .cfg-save-row { display: flex; align-items: center; gap: 14px; }
 .hint { font-size: 12px; color: var(--green); }
+
+/* 截止日期提示（填写页） */
+.deadline-bar {
+  margin-top: 10px; font-size: 12.5px; color: #7fd6ea;
+  background: rgba(86,200,232,.09); border: 1px solid rgba(86,200,232,.28);
+  border-radius: 8px; padding: 9px 12px; line-height: 1.6;
+}
+.deadline-bar.passed {
+  color: #ff8a8a; background: rgba(224,85,85,.1); border-color: rgba(224,85,85,.32);
+}
+
+/* 题目配置：提示文字 / 数字范围 */
+.fe-extras { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.fe-extra { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; color: var(--txt-dim); flex: 1; min-width: 180px; }
+.fe-extra.short { flex: 0 0 110px; min-width: 100px; }
+.fe-extra input {
+  width: 100%; background: rgba(4,14,24,.55);
+  border: 1px solid rgba(120,170,195,.22);
+  border-radius: 7px; color: var(--txt); padding: 7px 10px;
+  font-size: 12.5px; outline: none; font-family: inherit;
+}
+.fe-extra input:focus { border-color: rgba(86,200,232,.6); }
+#cfgDeadline { color-scheme: dark; }
 
 /* toast */
 .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #1d384d; border: 1px solid rgba(86,200,232,.4); color: var(--txt); padding: 11px 20px; border-radius: 9px; font-size: 13px; z-index: 99; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
